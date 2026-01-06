@@ -5,3 +5,8 @@ This project aims to combine OpenXR through Unity, MuJoCo physics engine and ROS
 - Follow this Guide for using ROS2: https://github.com/Unity-Technologies/Unity-Robotics-Hub/blob/main/tutorials/ros_unity_integration/setup.md
 - Download Unity, OpenXR, Meta Quest Link to for the Quest 3, Add this package for unity to talk to ROS2 https://github.com/Unity-Technologies/ROS-TCP-Connector.git?path=/com.unity.robotics.ros-tcp-connector
 - Install MuJoCo using this for Unity: https://mujoco.readthedocs.io/en/latest/unity.html
+
+# Start the Docker Container
+- Be in OpenXR_Unity_MuJoCo_ROS2_Robotics_Simulator\ros2 directory
+- build the container: docker build -t ros2_unity_image -f docker/Dockerfile .
+- run the container: docker run -it --rm -p 10000:10000 ros2_unity_image /bin/bash
