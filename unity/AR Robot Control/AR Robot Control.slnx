@@ -1,0 +1,6 @@
+﻿<Solution>
+  <Project Path="Mujoco.Runtime.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Mujoco.Editor.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+</Solution>

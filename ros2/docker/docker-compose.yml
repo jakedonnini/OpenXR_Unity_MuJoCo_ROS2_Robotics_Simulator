@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  ros2:
+    build: .
+    container_name: unity_ros2
+    volumes:
+      - ../ros2_ws:/home/dev/ros2_ws
+    ports:
+      - "10000:10000"
+    tty: true

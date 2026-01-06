@@ -1,0 +1,12 @@
+**/Library/
+**/Temp/
+**/Obj/
+**/Build/
+**/Logs/
+
+**/build/
+**/install/
+**/log/
+
+.vscode/
+.idea/
