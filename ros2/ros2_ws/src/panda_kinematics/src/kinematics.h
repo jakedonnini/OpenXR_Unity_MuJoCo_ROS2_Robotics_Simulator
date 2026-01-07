@@ -4,6 +4,9 @@
 #include <Eigen/Dense> 
 #include <vector>
 
+// Compatibility typedef for older Eigen versions (ROS2 Foxy)
+using Vector7d = Eigen::Matrix<double, 7, 1>;
+
 // Compute the Denavit-Hartenberg homogeneous transformation
 Eigen::Matrix4d Ai(double a_i, double alpha_i, double d_i, double theta_i);
 
@@ -16,7 +19,7 @@ Eigen::Matrix4d Ai(double a_i, double alpha_i, double d_i, double theta_i);
 // RETURNS:
 //   T_list - vector of 4x4 transforms from base to each joint + end effector
 std::vector<Eigen::Matrix4d> forwardKinematics(
-    const Eigen::Vector<double, 7>& q,
+    const Vector7d& q,
     Eigen::Matrix<double, 8, 3>& jointPositions,
     Eigen::Matrix4d& T0e);
 
@@ -56,12 +59,12 @@ Eigen::Vector3d calcAngDiff(const Eigen::Matrix3d& R_des, const Eigen::Matrix3d&
 // OUTPUT:
 //   Returns dq (7x1) joint velocities minimizing least squares error; if underdetermined,
 //   returns the minimal L2-norm solution. If all targets are unconstrained, returns zeros.
-Eigen::Vector<double, 7> IK_velocity(const Eigen::Vector<double, 7>& q_in,
+Vector7d IK_velocity(const Vector7d& q_in,
                                      const Eigen::Vector3d& v_in,
                                      const Eigen::Vector3d& omega_in);
 
 // Inverse Kinematics velocity solver given a 6x7 Jacobian directly
-Eigen::Vector<double, 7> IK_velocity_fromJ(const Eigen::Matrix<double, 6, 7>& J,
+Vector7d IK_velocity_fromJ(const Eigen::Matrix<double, 6, 7>& J,
                                            const Eigen::Vector3d& v_in,
                                            const Eigen::Vector3d& omega_in);
 
@@ -85,7 +88,7 @@ produces an end effector pose which is within the given linear and
 angular tolerances of the target pose, and also respects the joint
 limits.
 */
-bool is_valid_solution(const Eigen::Vector<double, 7>& q,
+bool is_valid_solution(const Vector7d& q,
                        const Eigen::Matrix4d& T_target, 
                        double position_tolerance = 0.05, 
                        double angle_tolerance = 0.1);
@@ -106,7 +109,7 @@ OUTPUTS:
 dq - a desired joint velocity to perform this task, which will smoothly
 decay to zero magnitude as the task is achieved
 */
-Eigen::Vector<double, 7> end_effector_task(const Eigen::Vector<double, 7>& q, const Eigen::Matrix4d& T_target);
+Vector7d end_effector_task(const Vector7d& q, const Eigen::Matrix4d& T_target);
 
 /*
 Secondary task for IK solver. Computes a joint velocity which will
@@ -125,14 +128,14 @@ OUTPUTS:
 dq - a desired joint velocity to perform this task, which will smoothly
 decay to zero magnitude as the task is achieved
 */
-Eigen::Vector<double, 7> joint_centering_task(const Eigen::Vector<double, 7>& q, double rate = 0.1);
+Vector7d joint_centering_task(const Vector7d& q, double rate = 0.1);
 
 /*
 computes a single step of an inverse kinematics solver which attempts to
 move the end effector to the target pose for gradient descent.
 */
-Eigen::Vector<double, 7> inverse_kinematics_step(
-    const Eigen::Vector<double, 7>& q_current,
+Vector7d inverse_kinematics_step(
+    const Vector7d& q_current,
     const Eigen::Matrix4d& T_target,
     double alpha = 0.1,
     double joint_centering_rate = 0.1
@@ -146,8 +149,8 @@ class KinematicsCache {
 public:
     KinematicsCache();
 
-    void setConfiguration(const Eigen::Vector<double,7>& q);
-    const Eigen::Vector<double,7>& q() const { return q_; }
+    void setConfiguration(const Vector7d& q);
+    const Vector7d& q() const { return q_; }
 
     // Ensure FK computed
     void ensureFK();
@@ -162,7 +165,7 @@ public:
     void invalidate() { dirty_fk_ = true; dirty_jac_ = true; }
 
 private:
-    Eigen::Vector<double,7> q_;
+    Vector7d q_;
     Eigen::Matrix<double,8,3> jointPositions_;
     Eigen::Matrix4d T0e_ = Eigen::Matrix4d::Identity();
     std::vector<Eigen::Matrix4d> T_list_;
@@ -172,7 +175,7 @@ private:
 };
 
 // Optimized IK step using cached FK/Jacobian (single computation per call)
-Eigen::Vector<double,7> inverse_kinematics_step_optimized(
+Vector7d inverse_kinematics_step_optimized(
     KinematicsCache& cache,
     const Eigen::Matrix4d& T_target,
     double alpha = 0.1,

@@ -20,7 +20,7 @@ Eigen::Matrix4d Ai(double a_i, double alpha_i, double d_i, double theta_i) {
 
 // Forward kinematics function
 std::vector<Eigen::Matrix4d> forwardKinematics(
-    const Eigen::Vector<double, 7>& q,
+    const Vector7d& q,
     Eigen::Matrix<double, 8, 3>& jointPositions,
     Eigen::Matrix4d& T0e
 ) {
@@ -132,12 +132,12 @@ Eigen::Vector3d calcAngDiff(const Eigen::Matrix3d& R_des, const Eigen::Matrix3d&
 }
 
 // IK velocity solver implementing the Python behavior
-Eigen::Vector<double, 7> IK_velocity(const Eigen::Vector<double, 7>& q_in,
+Vector7d IK_velocity(const Vector7d& q_in,
                                      const Eigen::Vector3d& v_in,
                                      const Eigen::Vector3d& omega_in) 
                                      {
     // Build Jacobian at q_in using existing forwardKinematics/computeJacobian
-    Eigen::Vector<double, 7> q = q_in; // mutable copy for forwardKinematics
+    Vector7d q = q_in; // mutable copy for forwardKinematics
     Eigen::Matrix<double, 8, 3> jointPositions;
     Eigen::Matrix4d T0e;
     std::vector<Eigen::Matrix4d> T_list;
@@ -163,7 +163,7 @@ Eigen::Vector<double, 7> IK_velocity(const Eigen::Vector<double, 7>& q_in,
     }
 
     // If no constraints, return zeros
-    Eigen::Vector<double, 7> dq = Eigen::Vector<double, 7>::Zero();
+    Vector7d dq = Vector7d::Zero();
     if (validRows.empty()) {
         return dq;
     }
@@ -213,7 +213,7 @@ void distance_and_angle(const Eigen::Matrix4d& G,
     angle = std::acos(cos_angle);
 }
 
-bool is_valid_solution(const Eigen::Vector<double, 7>& q, const Eigen::Matrix4d& T_target, double position_tolerance, double angle_tolerance) {
+bool is_valid_solution(const Vector7d& q, const Eigen::Matrix4d& T_target, double position_tolerance, double angle_tolerance) {
     // Joint limits for Franka Emika Panda
     const double lower_limits[7] = {-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973};
     const double upper_limits[7] = { 2.8973,  1.7628,  2.8973, -0.0698,  2.8973,  3.7525,  2.8973};
@@ -228,7 +228,7 @@ bool is_valid_solution(const Eigen::Vector<double, 7>& q, const Eigen::Matrix4d&
     Eigen::Matrix<double, 8, 3> jointPositions;
     Eigen::Matrix4d T0e;
     std::vector<Eigen::Matrix4d> T_list;
-    Eigen::Vector<double, 7> q_copy = q; // forwardKinematics requires non-const reference
+    Vector7d q_copy = q; // forwardKinematics requires non-const reference
     T_list = forwardKinematics(q_copy, jointPositions, T0e);
 
     double distance, angle;
@@ -256,11 +256,11 @@ Eigen::MatrixXd dampedPseudoinverse(const Eigen::MatrixXd& J, double lambda) {
     }
 }
 
-Eigen::Vector<double, 7> end_effector_task(const Eigen::Vector<double, 7>& q, const Eigen::Matrix4d& T_target) {
+Vector7d end_effector_task(const Vector7d& q, const Eigen::Matrix4d& T_target) {
     // use the J psudoinverse to compute dq
 
     // Use FK to get current end-effector pose and Jacobian
-    Eigen::Vector<double, 7> q_copy = q; // forwardKinematics requires non-const reference
+    Vector7d q_copy = q; // forwardKinematics requires non-const reference
     Eigen::Matrix<double, 8, 3> jointPositions;
     Eigen::Matrix4d T0e;
     std::vector<Eigen::Matrix4d> T_list;
@@ -278,41 +278,41 @@ Eigen::Vector<double, 7> end_effector_task(const Eigen::Vector<double, 7>& q, co
 
 
     // Compute joint velocities
-    Eigen::Vector<double, 7> dq = J_pseudo * (Eigen::Matrix<double, 6, 1>() << displacement, axis).finished();
+    Vector7d dq = J_pseudo * (Eigen::Matrix<double, 6, 1>() << displacement, axis).finished();
     return dq;
 }
 
-Eigen::Vector<double, 7> joint_centering_task(const Eigen::Vector<double, 7>& q, double rate) {
+Vector7d joint_centering_task(const Vector7d& q, double rate) {
     // Joint limits for Franka Emika Panda
     const double lower_limits[7] = {-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973};
     const double upper_limits[7] = { 2.8973,  1.7628,  2.8973, -0.0698,  2.8973,  3.7525,  2.8973};
 
     // create a secondary task in the nullspace of the primary task
-    Eigen::Vector<double, 7> offset;
+    Vector7d offset;
     for (int i = 0; i < 7; ++i) {
         double center = lower_limits[i] + (upper_limits[i] - lower_limits[i]) / 2.0;
         offset[i] = (q[i] - center) / (upper_limits[i] - lower_limits[i]);
     }
 
-    Eigen::Vector<double, 7> dq = -offset * rate; // move towards center
+    Vector7d dq = -offset * rate; // move towards center
     return dq;
 }
 
 // can be optimized further by calculating relevent matrices only once (e.g. FK, Jacobian)
-Eigen::Vector<double, 7> inverse_kinematics_step(
-    const Eigen::Vector<double, 7>& q_current,
+Vector7d inverse_kinematics_step(
+    const Vector7d& q_current,
     const Eigen::Matrix4d& T_target,
     double alpha,
     double joint_centering_rate
 ) {
     // Primary task: end-effector position and orientation
-    Eigen::Vector<double, 7> dq_primary = end_effector_task(q_current, T_target);
+    Vector7d dq_primary = end_effector_task(q_current, T_target);
 
     // Secondary task: joint centering
-    Eigen::Vector<double, 7> dq_secondary = joint_centering_task(q_current, joint_centering_rate);
+    Vector7d dq_secondary = joint_centering_task(q_current, joint_centering_rate);
 
     // Combine tasks using nullspace projection
-    Eigen::Vector<double, 7> q_copy = q_current; // forwardKinematics requires non-const reference
+    Vector7d q_copy = q_current; // forwardKinematics requires non-const reference
     Eigen::Matrix<double, 8, 3> jointPositions;
     Eigen::Matrix4d T0e;
     std::vector<Eigen::Matrix4d> T_list;
@@ -332,7 +332,7 @@ Eigen::Vector<double, 7> inverse_kinematics_step(
     Eigen::Matrix<double, 7, 7> I = Eigen::Matrix<double, 7, 7>::Identity();
     Eigen::Matrix<double, 7, 7> N = I - J_pseudo * J; // Nullspace projector
 
-    Eigen::Vector<double, 7> dq = dq_primary + N * dq_secondary;
+    Vector7d dq = dq_primary + N * dq_secondary;
 
     // Scale by step size alpha
     dq *= alpha;
@@ -350,14 +350,14 @@ KinematicsCache::KinematicsCache() {
     dirty_jac_ = true;
 }
 
-void KinematicsCache::setConfiguration(const Eigen::Vector<double,7>& q) {
+void KinematicsCache::setConfiguration(const Vector7d& q) {
     q_ = q;
     invalidate();
 }
 
 void KinematicsCache::ensureFK() {
     if (!dirty_fk_) return;
-    Eigen::Vector<double,7> q_copy = q_;
+    Vector7d q_copy = q_;
     T_list_ = forwardKinematics(q_copy, jointPositions_, T0e_);
     dirty_fk_ = false;
     dirty_jac_ = true; // FK update invalidates Jacobian
@@ -370,7 +370,7 @@ void KinematicsCache::ensureJacobian() {
     dirty_jac_ = false;
 }
 
-Eigen::Vector<double,7> inverse_kinematics_step_optimized(
+Vector7d inverse_kinematics_step_optimized(
     KinematicsCache& cache,
     const Eigen::Matrix4d& T_target,
     double alpha,
@@ -390,11 +390,11 @@ Eigen::Vector<double,7> inverse_kinematics_step_optimized(
     twist.tail<3>() = axis;
 
     Eigen::Matrix<double,7,6> J_pseudo = dampedPseudoinverse(J);
-    Eigen::Vector<double,7> dq_primary = J_pseudo * twist;
+    Vector7d dq_primary = J_pseudo * twist;
 
-    Eigen::Vector<double,7> dq_secondary = joint_centering_task(q_current, joint_centering_rate);
+    Vector7d dq_secondary = joint_centering_task(q_current, joint_centering_rate);
     Eigen::Matrix<double,7,7> N = Eigen::Matrix<double,7,7>::Identity() - J_pseudo * J;
-    Eigen::Vector<double,7> dq = dq_primary + N * dq_secondary;
+    Vector7d dq = dq_primary + N * dq_secondary;
     dq *= alpha;
     return dq;
 }
