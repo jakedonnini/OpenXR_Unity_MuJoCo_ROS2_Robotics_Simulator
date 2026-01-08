@@ -48,17 +48,22 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.2.13f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\MuJoCoJointController.cs" />
     <Compile Include="Assets\Scripts\RosPublisherExample.cs" />
+    <Compile Include="Assets\Scripts\MuJoCoJointStatePublisher.cs" />
     <Compile Include="Assets\Scripts\Mujoco Material Assigner.cs" />
     <Compile Include="Assets\RosMessages\UnityRoboticsDemo\srv\ObjectPoseServiceResponse.cs" />
     <Compile Include="Assets\Scripts\RosSubscriberExample.cs" />
+    <Compile Include="Assets\Scripts\RosPublishPosition.cs" />
     <Compile Include="Assets\Scripts\Mujoco Test Version.cs" />
     <Compile Include="Assets\RosMessages\UnityRoboticsDemo\msg\PosRotMsg.cs" />
     <Compile Include="Assets\RosMessages\UnityRoboticsDemo\srv\PositionServiceRequest.cs" />
+    <Compile Include="Assets\Scripts\RosPandaArmSubscriber.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\RosMessages\UnityRoboticsDemo\msg\UnityColorMsg.cs" />
     <Compile Include="Assets\RosMessages\UnityRoboticsDemo\srv\PositionServiceResponse.cs" />
     <Compile Include="Assets\RosMessages\UnityRoboticsDemo\srv\ObjectPoseServiceRequest.cs" />
+    <Compile Include="Assets\RosMessages\PandaKinematics\msg\JointCommandMsg.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\NativeMuJoCo\mujoco.dll" />

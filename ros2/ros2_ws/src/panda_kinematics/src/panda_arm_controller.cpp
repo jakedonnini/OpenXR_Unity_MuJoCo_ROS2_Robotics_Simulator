@@ -1,6 +1,7 @@
 #include <chrono>
 #include <memory>
 #include "rclcpp/rclcpp.hpp"
+#include "kinematics.h"
 #include "panda_kinematics/msg/joint_command.hpp"  // Changed this line
 
 using namespace std::chrono_literals;
@@ -27,7 +28,7 @@ private:
     msg.header.frame_id = "base_link";
     
     msg.joint_angles = {
-      0.0, sin(count_ * 0.1) * 0.5, 0.0, -1.57, 
+      3.14, sin(count_ * 0.1) * 0.5, 0.0, -1.57, 
       0.0, cos(count_ * 0.1) * 0.3, 0.0
     };
     
