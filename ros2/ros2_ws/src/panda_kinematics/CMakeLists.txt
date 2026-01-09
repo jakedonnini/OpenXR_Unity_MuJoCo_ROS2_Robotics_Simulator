@@ -15,6 +15,7 @@ find_package(Eigen3 REQUIRED)
 # Generate custom messages
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/JointCommand.msg"
+  "msg/PosRot.msg"
   DEPENDENCIES std_msgs
 )
 
