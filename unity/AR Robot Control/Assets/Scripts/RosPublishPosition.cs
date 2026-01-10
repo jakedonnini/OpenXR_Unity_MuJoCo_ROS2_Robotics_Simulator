@@ -9,6 +9,9 @@ public class RosPublishPosition : MonoBehaviour
 
     // The game object
     public GameObject trackedObject;
+
+    public float[] positionOffset = new float[3] {0f, 0f, 0f};
+    public Transform armOffset;
     // Publish the cube's position and rotation every N seconds
     public float publishMessageFrequency = 0.05f;
     // Used to determine how much time has elapsed since the last message was published
@@ -32,14 +35,16 @@ public class RosPublishPosition : MonoBehaviour
             // Create a new message
             PosRotMsg posRotMsg = new PosRotMsg
             (
-                trackedObject.transform.position.x,
-                trackedObject.transform.position.y,
-                trackedObject.transform.position.z,
+                (trackedObject.transform.position.x - armOffset.position.x + positionOffset[0]),
+                trackedObject.transform.position.y - armOffset.position.y + positionOffset[1],
+                (trackedObject.transform.position.z - armOffset.position.z + positionOffset[2]),
                 trackedObject.transform.rotation.x,
                 trackedObject.transform.rotation.y,
                 trackedObject.transform.rotation.z,
                 trackedObject.transform.rotation.w
             );
+
+            // Debug.Log($"Publishing position: ({trackedObject.transform.position.x + armOffset.position.x}, {trackedObject.transform.position.y + armOffset.position.y}, {trackedObject.transform.position.z + armOffset.position.z})");
 
             // Publish the message
             ros.Publish(topicName, posRotMsg);

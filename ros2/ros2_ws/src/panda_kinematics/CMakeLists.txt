@@ -15,7 +15,6 @@ find_package(Eigen3 REQUIRED)
 # Generate custom messages
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/JointCommand.msg"
-  "msg/PosRot.msg"
   DEPENDENCIES std_msgs
 )
 
@@ -27,7 +26,10 @@ add_executable(panda_arm_controller
   src/panda_arm_controller.cpp
   src/kinematics.cpp
 )
-ament_target_dependencies(panda_arm_controller rclcpp Eigen3)
+
+find_package(unity_robotics_demo_msgs REQUIRED)
+
+ament_target_dependencies(panda_arm_controller rclcpp Eigen3 unity_robotics_demo_msgs)
 
 # Link the custom message to the executable
 rosidl_target_interfaces(panda_arm_controller 

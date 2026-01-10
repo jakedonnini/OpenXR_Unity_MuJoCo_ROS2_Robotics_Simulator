@@ -38,8 +38,8 @@ public class MuJoCoJointController : MonoBehaviour
         {
             if (jointActuators[i] != null)
             {
-                // Set the control signal for position actuators (radians)
-                jointActuators[i].Control = (float)msg.joint_angles[i];
+                // Set the control signal for position actuators (radians) and convert to degrees if necessary
+                jointActuators[i].Control = (float)msg.joint_angles[i]; // Convert to degrees if necessary
             }
         }
         

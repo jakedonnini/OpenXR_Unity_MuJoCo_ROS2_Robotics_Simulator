@@ -60,8 +60,8 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
             if (joints[i] != null)
             {
                 // Get joint position in radians (try these alternatives):
-                // Option 1: QposAddress
-                msg.joint_angles[i] = joints[i].Configuration;
+                // convert to radians
+                msg.joint_angles[i] = joints[i].Configuration * Mathf.Deg2Rad;
             }
             else
             {
@@ -69,6 +69,8 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
                 msg.joint_angles[i] = 0.0;
             }
         }
+
+        Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
         
         // Publish to ROS
         ros.Publish(topicName, msg);
