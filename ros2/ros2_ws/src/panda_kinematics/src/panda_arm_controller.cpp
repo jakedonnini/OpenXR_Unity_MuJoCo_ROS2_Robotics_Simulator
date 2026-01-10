@@ -115,7 +115,15 @@ private:
   {
     // RCLCPP_INFO(this->get_logger(), "Received target pose: pos(%.2f, %.2f, %.2f)", 
     //             msg->pos_x, msg->pos_y, msg->pos_z);
+
+    T_target_(0, 3) = msg->pos_x;
+    T_target_(1, 3) = msg->pos_y;
+    T_target_(2, 3) = msg->pos_z;
+    Eigen::Quaterniond quat(msg->rot_w, msg->rot_x, msg->rot_y, msg->rot_z);
+    quat.normalize();
+    T_target_.block<3,3>(0,0) = quat.toRotationMatrix();
     
+    /* handle conversion on unity side
     // Set position
     T_target_(0, 3) = msg->pos_x;
     T_target_(1, 3) = msg->pos_y;
@@ -129,6 +137,7 @@ private:
     T_target_(0,3) =  msg->pos_z;
     T_target_(1,3) = -msg->pos_x;
     T_target_(2,3) =  msg->pos_y;
+    */
   }
 
   void joint_state_callback(const panda_kinematics::msg::JointCommand::SharedPtr msg)

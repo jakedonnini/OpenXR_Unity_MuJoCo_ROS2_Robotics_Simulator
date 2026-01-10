@@ -50,10 +50,10 @@ public class MuJoCoAllJointsPos : MonoBehaviour
             //      x + baseOffset.position.z   // ROS X → Unity Z
             // );
 
-            Vector3 unityPos = new Vector3(
+            Vector3 unityPos = new Vector3( // start base line to transfrom correctly
                 x + baseOffset.position.x,  // ROS X → Unity X
-                z + baseOffset.position.y,  // ROS Z → Unity Y
-                -y + baseOffset.position.z   // ROS Y → Unity -Z
+                y + baseOffset.position.y,  // ROS Y → Unity Y
+                z + baseOffset.position.z   // ROS Z → Unity Z
             );
 
             jointSpheres[i].transform.position = unityPos;

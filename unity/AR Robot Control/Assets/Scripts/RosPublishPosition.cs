@@ -35,9 +35,9 @@ public class RosPublishPosition : MonoBehaviour
             // Create a new message
             PosRotMsg posRotMsg = new PosRotMsg
             (
-                (trackedObject.transform.position.x - armOffset.position.x + positionOffset[0]),
+                trackedObject.transform.position.x - armOffset.position.x + positionOffset[0],
                 trackedObject.transform.position.y - armOffset.position.y + positionOffset[1],
-                (trackedObject.transform.position.z - armOffset.position.z + positionOffset[2]),
+                trackedObject.transform.position.z - armOffset.position.z + positionOffset[2],
                 trackedObject.transform.rotation.x,
                 trackedObject.transform.rotation.y,
                 trackedObject.transform.rotation.z,
