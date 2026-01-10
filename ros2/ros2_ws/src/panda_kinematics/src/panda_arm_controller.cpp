@@ -2,8 +2,9 @@
 #include <memory>
 #include "rclcpp/rclcpp.hpp"
 #include "kinematics.h"
-#include "panda_kinematics/msg/joint_command.hpp"  // Changed this line
-#include "unity_robotics_demo_msgs/msg/pos_rot.hpp"  // Use the original
+#include "panda_kinematics/msg/joint_command.hpp" 
+#include "unity_robotics_demo_msgs/msg/pos_rot.hpp"
+#include "panda_kinematics/msg/all_joint_pos.hpp"
 
 using namespace std::chrono_literals;
 
@@ -12,8 +13,12 @@ class ArmController : public rclcpp::Node
 public:
   ArmController() : Node("arm_controller"), count_(0)
   {
-    joint_cmd_publisher_  = this->create_publisher<panda_kinematics::msg::JointCommand>(  // Changed this
+    joint_cmd_publisher_  = this->create_publisher<panda_kinematics::msg::JointCommand>(
       "arm_joint_commands", 10);
+
+    // for debug show all poses
+    joint_pos_publisher_  = this->create_publisher<panda_kinematics::msg::AllJointPos>(
+      "arm_joint_pos", 10);
 
     // Subscriber for target pose (pos_rot)
     pose_subscriber_ = this->create_subscription<unity_robotics_demo_msgs::msg::PosRot>(
@@ -49,10 +54,14 @@ private:
 
     if (T_target_(0,3) == 0.0 && T_target_(1,3) == 0.0 && T_target_(2,3) == 0.0) {
         RCLCPP_WARN(this->get_logger(), "No target pose set yet.");
+        return; // no target set yet
+    }
+
+    if (count_ > 50) {
+        // this is the home position
         Vector7d first_pos;
         first_pos << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
         publish_joint_command(first_pos);
-        return; // no target set yet
     }
 
     Eigen::Matrix4d not_Rot_T = T_target_;
@@ -95,26 +104,10 @@ private:
                 CurrentPose(1, 0), CurrentPose(1, 1), CurrentPose(1, 2),
                 CurrentPose(2, 0), CurrentPose(2, 1), CurrentPose(2, 2));
 
-    // test by rotating to pi one at a time
-    // Vector7d test;
-    // float num = M_PI/2;
-    // if (count_ > 100 && count_ <= 200)
-    //     test << num, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
-    // else if (count_ > 200 && count_ <= 300)
-    //     test << num, num, 0.0, 0.0, 0.0, 0.0, 0.0;
-    // else if (count_ > 300 && count_ <= 400)
-    //     test << num, num, num, 0.0, 0.0, 0.0, 0.0;
-    // else if (count_ > 400 && count_ <= 500)
-    //     test << num, num, num, -num, 0.0, 0.0, 0.0;
-    // else if (count_ > 500 && count_ <= 600)
-    //     test << num, num, num, -num, num, 0.0, 0.0;
-    // else if (count_ > 600 && count_ <= 700)
-    //     test << num, num, num, -num, num, num, 0.0;
-    // else
-    //     test << num, num, num, -num, num, num, num;
     if (count_ > 1000)
         target_joint_angles_ << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
     publish_joint_command(target_joint_angles_);
+    publish_joint_positions(jointPositions);
     count_++;
   }
 
@@ -164,7 +157,19 @@ private:
     joint_cmd_publisher_->publish(msg);
   }
 
+  void publish_joint_positions(const Eigen::Matrix<double, 8, 3> jointPositions)
+  {
+    panda_kinematics::msg::AllJointPos msg;
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            msg.data[r * 3 + c] = jointPositions(r, c);
+        }
+    }
+    joint_pos_publisher_->publish(msg);
+  }
+
   rclcpp::Publisher<panda_kinematics::msg::JointCommand>::SharedPtr joint_cmd_publisher_;
+  rclcpp::Publisher<panda_kinematics::msg::AllJointPos>::SharedPtr joint_pos_publisher_;
   rclcpp::Subscription<unity_robotics_demo_msgs::msg::PosRot>::SharedPtr pose_subscriber_;
   rclcpp::Subscription<panda_kinematics::msg::JointCommand>::SharedPtr joint_state_subscriber_;
   Vector7d current_joint_angles_; // where the arm is currently
