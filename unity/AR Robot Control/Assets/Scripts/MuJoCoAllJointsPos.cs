@@ -44,16 +44,10 @@ public class MuJoCoAllJointsPos : MonoBehaviour
             float z = (float)msg.data[baseIdx + 2];
 
             // If these are ROS coordinates, convert ROS → Unity here
-            // Vector3 unityPos = new Vector3(
-            //     -y + baseOffset.position.x,  // ROS Y → Unity -X
-            //      z + baseOffset.position.y,  // ROS Z → Unity Y
-            //      x + baseOffset.position.z   // ROS X → Unity Z
-            // );
-
-            Vector3 unityPos = new Vector3( // start base line to transfrom correctly
-                x + baseOffset.position.x,  // ROS X → Unity X
-                y + baseOffset.position.y,  // ROS Y → Unity Y
-                z + baseOffset.position.z   // ROS Z → Unity Z
+            Vector3 unityPos = new Vector3(
+                x + baseOffset.position.x,  // ROS x → Unity x
+                z + baseOffset.position.y,  // ROS y → Unity z
+                y + baseOffset.position.z   // ROS z → Unity y
             );
 
             jointSpheres[i].transform.position = unityPos;

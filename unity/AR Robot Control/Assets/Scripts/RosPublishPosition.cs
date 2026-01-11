@@ -32,15 +32,16 @@ public class RosPublishPosition : MonoBehaviour
         {
             timeElapsed = 0;
 
+            // convert from unity(RUF) to ROS(FLU)
             // Create a new message
             PosRotMsg posRotMsg = new PosRotMsg
             (
-                trackedObject.transform.position.x - armOffset.position.x + positionOffset[0],
-                trackedObject.transform.position.y - armOffset.position.y + positionOffset[1],
-                trackedObject.transform.position.z - armOffset.position.z + positionOffset[2],
+                trackedObject.transform.position.x, // - armOffset.position.x + positionOffset[0],
+                trackedObject.transform.position.z, // - armOffset.position.z + positionOffset[2],
+                trackedObject.transform.position.y, // - armOffset.position.y + positionOffset[1],
                 trackedObject.transform.rotation.x,
-                trackedObject.transform.rotation.y,
-                trackedObject.transform.rotation.z,
+                -trackedObject.transform.rotation.y,
+                -trackedObject.transform.rotation.z,
                 trackedObject.transform.rotation.w
             );
 

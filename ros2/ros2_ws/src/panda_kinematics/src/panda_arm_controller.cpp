@@ -57,11 +57,13 @@ private:
         return; // no target set yet
     }
 
-    if (count_ > 50) {
+    if (count_ < 50) {
         // this is the home position
         Vector7d first_pos;
         first_pos << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
         publish_joint_command(first_pos);
+        count_++;
+        return;
     }
 
     Eigen::Matrix4d not_Rot_T = T_target_;
@@ -72,7 +74,7 @@ private:
     static KinematicsCache cache;
     // IK cache (declared once, reused each loop)
     cache.setConfiguration(current_joint_angles_);
-    Vector7d dq_step = inverse_kinematics_step_optimized(cache, not_Rot_T, 0.05, 0.2);
+    Vector7d dq_step = inverse_kinematics_step_optimized(cache, not_Rot_T, 0.3, 0.1);
 
     target_joint_angles_ = current_joint_angles_ + dq_step; // scale step size
 
@@ -93,9 +95,8 @@ private:
                 T_target_(2, 0), T_target_(2, 1), T_target_(2, 2));
 
     // Debug: print current end-effector pose
-    Eigen::Matrix4d CurrentPose;
-    Eigen::Matrix<double, 8, 3> jointPositions;
-    forwardKinematics(current_joint_angles_, jointPositions, CurrentPose);
+    const auto& CurrentPose = cache.T0e();
+    const auto& jointPositions = cache.jointPositions();
     RCLCPP_INFO(this->get_logger(), "Current pose: Pos(%.2f, %.2f, %.2f) Rot:\n[%.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f]",
                 CurrentPose(0, 3),
                 CurrentPose(1, 3),
@@ -104,10 +105,16 @@ private:
                 CurrentPose(1, 0), CurrentPose(1, 1), CurrentPose(1, 2),
                 CurrentPose(2, 0), CurrentPose(2, 1), CurrentPose(2, 2));
 
+    // print the distance to target
+    float diff = diff_to_target(CurrentPose, T_target_).norm();
+    RCLCPP_INFO(this->get_logger(), "Distance to target: %.4f meters", diff);
+
     if (count_ > 1000)
         target_joint_angles_ << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
     publish_joint_command(target_joint_angles_);
     publish_joint_positions(jointPositions);
+
+    // Increment step count
     count_++;
   }
 
