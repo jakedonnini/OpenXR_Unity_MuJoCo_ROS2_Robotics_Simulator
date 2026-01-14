@@ -4,28 +4,130 @@ using Mujoco;
 
 public class MujocoGrabbableSync : MonoBehaviour
 {
-    public MujocoBody mujocoBody; // your MuJoCo wrapper
+    public MjBody mujocoBody;
 
-    private bool isGrabbed;
+    public OVRHand rightHand;
+    public OVRHand leftHand;
+
+    public float kp = 10f;   // stiffness
+    public float kd = 1f;    // damping
+    public float maxForce = 10f;
+
+    public float debugForceScale = 0.1f;
+    GameObject debugForceCylinder;
 
     void Start()
     {
-        var grabbable = GetComponent<Grabbable>();
-        grabbable.WhenPointerEventRaised += OnPointerEvent;
+        debugForceCylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        debugForceCylinder.name = "DebugForce";
+        debugForceCylinder.transform.localScale = new Vector3(0.02f, 0.5f, 0.02f);
+
+        var renderer = debugForceCylinder.GetComponent<Renderer>();
+        renderer.material = new Material(Shader.Find("Unlit/Color"));
+        renderer.material.color = Color.red;
+
+        Destroy(debugForceCylinder.GetComponent<Collider>());
     }
 
-    void OnPointerEvent(PointerEvent evt)
+    
+    void Update()
     {
-        if (evt.Type == PointerEventType.Select)
+        // Clear forces every frame (VERY IMPORTANT)
+        ClearForces();
+
+        if (IsGripping(rightHand))
         {
-            isGrabbed = true;
-            mujocoBody.SetKinematic(true); // stop sim
+            ApplyForceFromHand(rightHand);
         }
-        else if (evt.Type == PointerEventType.Unselect)
+        else if (IsGripping(leftHand))
         {
-            isGrabbed = false;
-            SyncUnityToMuJoCo();
-            mujocoBody.SetKinematic(false); // resume sim
+            ApplyForceFromHand(leftHand);
+        } 
+        else
+        {
+            if (debugForceCylinder != null)
+                debugForceCylinder.SetActive(false);
         }
     }
+
+    bool IsGripping(OVRHand hand)
+    {
+        return hand != null &&
+               hand.GetFingerPinchStrength(OVRHand.HandFinger.Index) > 0.8f;
+    }
+    
+    unsafe void ApplyForceFromHand(OVRHand hand)
+    {
+        Vector3 handPos = hand.transform.position;
+        Vector3 objPos  = mujocoBody.transform.position;
+
+        // --- POSITION ERROR ---
+        Vector3 posError = handPos - objPos;
+
+        // --- OBJECT VELOCITY (MuJoCo world frame) ---
+        int bodyId = mujocoBody.MujocoId;
+        int velAdr = MjScene.Instance.Model->body_dofadr[bodyId];
+
+        Vector3 objVel = Vector3.zero;
+        if (velAdr >= 0)
+        {
+            objVel = new Vector3(
+                (float)MjScene.Instance.Data->qvel[velAdr + 0],
+                (float)MjScene.Instance.Data->qvel[velAdr + 1],
+                (float)MjScene.Instance.Data->qvel[velAdr + 2]
+            );
+        }
+
+        // --- PD FORCE ---
+        Vector3 force = kp * posError - kd * objVel;
+        force = Vector3.ClampMagnitude(force, maxForce);
+        UpdateDebugForce(objPos, force);
+        Debug.Log($"Applying force: {force}");
+
+        // --- APPLY FORCE AT COM ---
+        int forceIdx = 6 * bodyId;
+        MjScene.Instance.Data->xfrc_applied[forceIdx + 0] = force.x;
+        MjScene.Instance.Data->xfrc_applied[forceIdx + 1] = force.y;
+        MjScene.Instance.Data->xfrc_applied[forceIdx + 2] = force.z;
+    }
+
+    unsafe void ClearForces()
+    {
+        int idx = 6 * mujocoBody.MujocoId;
+        MjScene.Instance.Data->xfrc_applied[idx + 0] = 0;
+        MjScene.Instance.Data->xfrc_applied[idx + 1] = 0;
+        MjScene.Instance.Data->xfrc_applied[idx + 2] = 0;
+        MjScene.Instance.Data->xfrc_applied[idx + 3] = 0;
+        MjScene.Instance.Data->xfrc_applied[idx + 4] = 0;
+        MjScene.Instance.Data->xfrc_applied[idx + 5] = 0;
+    }
+
+    void UpdateDebugForce(Vector3 origin, Vector3 force)
+    {
+        if (debugForceCylinder == null)
+            return;
+
+        float mag = force.magnitude;
+
+        if (mag < 1e-4f)
+        {
+            debugForceCylinder.SetActive(false);
+            return;
+        }
+
+        debugForceCylinder.SetActive(true);
+
+        Vector3 dir = force.normalized;
+        float length = mag * debugForceScale;
+
+        // Cylinder is centered, height is along Y
+        debugForceCylinder.transform.position = origin + dir * (length * 0.5f);
+        debugForceCylinder.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir);
+        debugForceCylinder.transform.localScale = new Vector3(
+            0.02f,
+            length * 0.5f,
+            0.02f
+        );
+    }
+
 }

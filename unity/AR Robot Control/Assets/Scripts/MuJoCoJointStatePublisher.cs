@@ -76,7 +76,7 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
             }
         }
 
-        Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
+        // Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
         
         // Publish to ROS
         ros.Publish(topicName, msg);

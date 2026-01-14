@@ -43,7 +43,7 @@ public class MuJoCoJointController : MonoBehaviour
             }
         }
         
-        Debug.Log($"Applied joint angles: [{string.Join(", ", msg.joint_angles)}]");
+        // Debug.Log($"Applied joint angles: [{string.Join(", ", msg.joint_angles)}]");
     }
     
     // Alternative method if using velocity control
