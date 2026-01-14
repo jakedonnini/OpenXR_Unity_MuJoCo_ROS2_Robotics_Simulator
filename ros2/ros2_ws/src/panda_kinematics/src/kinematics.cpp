@@ -322,7 +322,7 @@ Vector7d inverse_kinematics_step(
 
     Eigen::Matrix<double, 6, 7> J;
     computeJacobian(T_list, J);
-    Eigen::Matrix<double, 7, 6> J_pseudo = dampedPseudoinverse(J);
+    Eigen::Matrix<double, 7, 6> J_pseudo = dampedPseudoinverse(J, 0.05);
 
     // std::cout << "J:\n" << J << std::endl;
     // for (int i = 0; i < T_list.size(); ++i)
@@ -389,7 +389,7 @@ Vector7d inverse_kinematics_step_optimized(
     twist.head<3>() = displacement;
     twist.tail<3>() = axis;
 
-    Eigen::Matrix<double,7,6> J_pseudo = dampedPseudoinverse(J);
+    Eigen::Matrix<double,7,6> J_pseudo = dampedPseudoinverse(J, 0.05);
     Vector7d dq_primary = J_pseudo * twist;
 
     Vector7d dq_secondary = joint_centering_task(q_current, joint_centering_rate);

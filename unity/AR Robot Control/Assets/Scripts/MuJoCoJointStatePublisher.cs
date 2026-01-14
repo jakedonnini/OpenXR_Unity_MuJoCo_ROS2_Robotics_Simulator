@@ -53,8 +53,8 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
         // Set header with timestamp
         msg.header = new HeaderMsg();
         var currentTime = Time.realtimeSinceStartup;
-        msg.header.stamp.sec = (int)currentTime;
-        msg.header.stamp.nanosec = (uint)((currentTime % 1) * 1e9);
+        //msg.header.stamp.sec = (int)currentTime;
+        //msg.header.stamp.nanosec = (uint)((currentTime % 1) * 1e9);
         msg.header.frame_id = "panda_link0";
         
         msg.joint_angles = new double[7];

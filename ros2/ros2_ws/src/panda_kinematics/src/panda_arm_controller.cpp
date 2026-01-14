@@ -66,15 +66,15 @@ private:
         return;
     }
 
-    Eigen::Matrix4d not_Rot_T = T_target_;
-    not_Rot_T.block<3,3>(0,0) = Eigen::Matrix3d::Identity(); // keep orientation fixed for now
-    not_Rot_T(1,1) = -1.0; // make pointing down
-    not_Rot_T(2,2) = -1.0;
+    // Eigen::Matrix4d not_Rot_T = T_target_;
+    // not_Rot_T.block<3,3>(0,0) = Eigen::Matrix3d::Identity(); // keep orientation fixed for now
+    // not_Rot_T(1,1) = -1.0; // make pointing down
+    // not_Rot_T(2,2) = -1.0;
 
     static KinematicsCache cache;
     // IK cache (declared once, reused each loop)
     cache.setConfiguration(current_joint_angles_);
-    Vector7d dq_step = inverse_kinematics_step_optimized(cache, not_Rot_T, 0.3, 0.1);
+    Vector7d dq_step = inverse_kinematics_step_optimized(cache, T_target_, 0.8, 0.2);
 
     target_joint_angles_ = current_joint_angles_ + dq_step; // scale step size
 
@@ -106,11 +106,13 @@ private:
                 CurrentPose(2, 0), CurrentPose(2, 1), CurrentPose(2, 2));
 
     // print the distance to target
-    float diff = diff_to_target(CurrentPose, T_target_).norm();
-    RCLCPP_INFO(this->get_logger(), "Distance to target: %.4f meters", diff);
+    Eigen::Vector3d diff = diff_to_target(CurrentPose, T_target_);
+    RCLCPP_INFO(this->get_logger(), "Distance to target: X: %.4f, Y: %.4f, Z: %.4f",
+                diff[0], diff[1], diff[2]);
 
-    if (count_ > 1000)
-        target_joint_angles_ << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
+    // if (count_ > 1000)
+    //     target_joint_angles_ << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
+
     publish_joint_command(target_joint_angles_);
     publish_joint_positions(jointPositions);
 
@@ -129,22 +131,6 @@ private:
     Eigen::Quaterniond quat(msg->rot_w, msg->rot_x, msg->rot_y, msg->rot_z);
     quat.normalize();
     T_target_.block<3,3>(0,0) = quat.toRotationMatrix();
-    
-    /* handle conversion on unity side
-    // Set position
-    T_target_(0, 3) = msg->pos_x;
-    T_target_(1, 3) = msg->pos_y;
-    T_target_(2, 3) = msg->pos_z;
-    
-    // Convert quaternion to rotation matrix
-    Eigen::Quaterniond quat(msg->rot_w, msg->rot_z, -msg->rot_x, msg->rot_y); // Note the reordering and sign change
-    quat.normalize();
-    T_target_.block<3,3>(0,0) = quat.toRotationMatrix();
-    // Unity → ROS position
-    T_target_(0,3) =  msg->pos_z;
-    T_target_(1,3) = -msg->pos_x;
-    T_target_(2,3) =  msg->pos_y;
-    */
   }
 
   void joint_state_callback(const panda_kinematics::msg::JointCommand::SharedPtr msg)
