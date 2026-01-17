@@ -14,7 +14,10 @@ public class MujocoGrabbableSync : MonoBehaviour
     public float maxForce = 10f;
 
     public float debugForceScale = 0.1f;
+    public float[] positionOffset = new float[3] {0f, 0f, 0f};
     GameObject debugForceCylinder;
+
+    private Transform cubeParent;
 
     void Start()
     {
@@ -27,6 +30,8 @@ public class MujocoGrabbableSync : MonoBehaviour
         renderer.material.color = Color.red;
 
         Destroy(debugForceCylinder.GetComponent<Collider>());
+
+        cubeParent = mujocoBody.GetComponentInParent<Transform>();
     }
 
     
@@ -53,13 +58,13 @@ public class MujocoGrabbableSync : MonoBehaviour
     bool IsGripping(OVRHand hand)
     {
         return hand != null &&
-               hand.GetFingerPinchStrength(OVRHand.HandFinger.Index) > 0.8f;
+               hand.GetFingerPinchStrength(OVRHand.HandFinger.Index) > 0.75f;
     }
     
     unsafe void ApplyForceFromHand(OVRHand hand)
     {
         Vector3 handPos = hand.transform.position;
-        Vector3 objPos  = mujocoBody.transform.position;
+        Vector3 objPos  = cubeParent.position;
 
         // --- POSITION ERROR ---
         Vector3 posError = handPos - objPos;
@@ -82,13 +87,25 @@ public class MujocoGrabbableSync : MonoBehaviour
         Vector3 force = kp * posError - kd * objVel;
         force = Vector3.ClampMagnitude(force, maxForce);
         UpdateDebugForce(objPos, force);
-        Debug.Log($"Applying force: {force}");
+
+        Vector3 dir = force.normalized;
 
         // --- APPLY FORCE AT COM ---
         int forceIdx = 6 * bodyId;
-        MjScene.Instance.Data->xfrc_applied[forceIdx + 0] = force.x;
-        MjScene.Instance.Data->xfrc_applied[forceIdx + 1] = force.y;
-        MjScene.Instance.Data->xfrc_applied[forceIdx + 2] = force.z;
+        MjScene.Instance.Data->xfrc_applied[forceIdx + 0] = positionOffset[0]*force.x;
+        MjScene.Instance.Data->xfrc_applied[forceIdx + 1] = positionOffset[1]*force.y;
+        MjScene.Instance.Data->xfrc_applied[forceIdx + 2] = positionOffset[2]*force.z;
+
+        // ADD THIS DEBUG
+        Debug.Log($"Hand pos: {handPos}, Obj pos: {objPos} Force: {force}");
+        // Debug.Log($"Position error: {posError}");
+        // Debug.Log($"Calculated force: {force}");
+        // Debug.Log($"Body ID: {bodyId}, Force index: {forceIdx}");
+        
+        // // Check if force is actually being written
+        // Debug.Log($"xfrc_applied[{forceIdx}] = {force.x}");
+        // Debug.Log($"xfrc_applied[{forceIdx+1}] = {force.y}");
+        // Debug.Log($"xfrc_applied[{forceIdx+2}] = {force.z}");
     }
 
     unsafe void ClearForces()
@@ -121,11 +138,11 @@ public class MujocoGrabbableSync : MonoBehaviour
         float length = mag * debugForceScale;
 
         // Cylinder is centered, height is along Y
-        debugForceCylinder.transform.position = origin + dir * (length * 0.5f);
+        debugForceCylinder.transform.position = origin + dir * (length * 1.5f);
         debugForceCylinder.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir);
         debugForceCylinder.transform.localScale = new Vector3(
             0.02f,
-            length * 0.5f,
+            length * 1.5f,
             0.02f
         );
     }
