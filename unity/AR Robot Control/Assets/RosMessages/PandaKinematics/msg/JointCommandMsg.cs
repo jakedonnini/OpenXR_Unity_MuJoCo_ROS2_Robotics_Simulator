@@ -15,19 +15,22 @@ namespace RosMessageTypes.PandaKinematics
 
         public Std.HeaderMsg header;
         public double[] joint_angles;
+        public double gripper_pos;
         public string command_type;
 
         public JointCommandMsg()
         {
             this.header = new Std.HeaderMsg();
             this.joint_angles = new double[7];
+            this.gripper_pos = 0.0;
             this.command_type = "";
         }
 
-        public JointCommandMsg(Std.HeaderMsg header, double[] joint_angles, string command_type)
+        public JointCommandMsg(Std.HeaderMsg header, double[] joint_angles, double gripper_pos, string command_type)
         {
             this.header = header;
             this.joint_angles = joint_angles;
+            this.gripper_pos = gripper_pos;
             this.command_type = command_type;
         }
 
@@ -37,6 +40,7 @@ namespace RosMessageTypes.PandaKinematics
         {
             this.header = Std.HeaderMsg.Deserialize(deserializer);
             deserializer.Read(out this.joint_angles, sizeof(double), 7);
+            deserializer.Read(out this.gripper_pos);
             deserializer.Read(out this.command_type);
         }
 
@@ -44,6 +48,7 @@ namespace RosMessageTypes.PandaKinematics
         {
             serializer.Write(this.header);
             serializer.Write(this.joint_angles);
+            serializer.Write(this.gripper_pos);
             serializer.Write(this.command_type);
         }
 
@@ -52,6 +57,7 @@ namespace RosMessageTypes.PandaKinematics
             return "JointCommandMsg: " +
             "\nheader: " + header.ToString() +
             "\njoint_angles: " + System.String.Join(", ", joint_angles.ToList()) +
+            "\ngripper_pos: " + gripper_pos.ToString() +
             "\ncommand_type: " + command_type.ToString();
         }
 

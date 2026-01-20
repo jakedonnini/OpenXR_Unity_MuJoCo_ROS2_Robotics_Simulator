@@ -9,7 +9,7 @@ public class MuJoCoJointController : MonoBehaviour
     [SerializeField] private string topicName = "arm_joint_commands";
     
     [Header("MuJoCo Joints")]
-    [SerializeField] private MjActuator[] jointActuators = new MjActuator[7];
+    [SerializeField] private MjActuator[] jointActuators = new MjActuator[8]; // 8th is gripper
     
     // Alternative: if using MjHingeJoint directly
     // [SerializeField] private MjHingeJoint[] joints = new MjHingeJoint[7];
@@ -42,6 +42,8 @@ public class MuJoCoJointController : MonoBehaviour
                 jointActuators[i].Control = (float)msg.joint_angles[i];
             }
         }
+
+        jointActuators[7].Control = (float)msg.gripper_pos; // Gripper control
         
         // Debug.Log($"Applied joint angles: [{string.Join(", ", msg.joint_angles)}]");
     }

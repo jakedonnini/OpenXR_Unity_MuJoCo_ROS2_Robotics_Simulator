@@ -142,10 +142,12 @@ private:
       }
       // RCLCPP_INFO(this->get_logger(), "Updated current joint state");
     }
+    gripper_pos_ = msg->gripper_pos;
   }
 
-  void publish_joint_command(const Vector7d& joint_angles)
+  void publish_joint_command(const Vector7d& joint_angles, float gripper_pos=0.0)
   {
+    // gripper: 1 open, 0 closed
     auto msg = panda_kinematics::msg::JointCommand();
     msg.header.stamp = this->now();
     msg.header.frame_id = "base_link";
@@ -156,6 +158,9 @@ private:
       msg.joint_angles[i] = joint_angles[i];
     }
     
+    // Set gripper position
+    msg.gripper_pos = gripper_pos;
+
     joint_cmd_publisher_->publish(msg);
   }
 
@@ -176,6 +181,7 @@ private:
   rclcpp::Subscription<panda_kinematics::msg::JointCommand>::SharedPtr joint_state_subscriber_;
   Vector7d current_joint_angles_; // where the arm is currently
   Vector7d target_joint_angles_; // where the arm's next step is
+  float gripper_pos_; // current gripper position
   Eigen::Matrix4d T_target_; // position and rotation target object
   rclcpp::TimerBase::SharedPtr timer_;
   size_t count_;

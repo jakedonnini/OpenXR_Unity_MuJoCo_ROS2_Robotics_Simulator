@@ -12,6 +12,7 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
     
     [Header("MuJoCo Joints")]
     [SerializeField] private MjHingeJoint[] joints = new MjHingeJoint[7];
+    [SerializeField] private MjSlideJoint gripperJoint;
     
     // Alternative: if reading from actuators instead
     [SerializeField] private MjActuator[] jointActuators = new MjActuator[7];
@@ -75,6 +76,9 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
                 msg.joint_angles[i] = 0.0;
             }
         }
+
+        // publish gripper position
+        msg.gripper_pos = gripperJoint.Configuration;
 
         // Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
         

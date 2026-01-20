@@ -86,7 +86,7 @@ public class MujocoGrabbableSync : MonoBehaviour
         // --- PD FORCE ---
         Vector3 force = kp * posError - kd * objVel;
         force = Vector3.ClampMagnitude(force, maxForce);
-        UpdateDebugForce(objPos, force);
+        UpdateDebugForce(objPos, force, handPos);
 
         Vector3 dir = force.normalized;
 
@@ -119,7 +119,7 @@ public class MujocoGrabbableSync : MonoBehaviour
         MjScene.Instance.Data->xfrc_applied[idx + 5] = 0;
     }
 
-    void UpdateDebugForce(Vector3 origin, Vector3 force)
+    void UpdateDebugForce(Vector3 origin, Vector3 force, Vector3 hand)
     {
         if (debugForceCylinder == null)
             return;
@@ -135,14 +135,15 @@ public class MujocoGrabbableSync : MonoBehaviour
         debugForceCylinder.SetActive(true);
 
         Vector3 dir = force.normalized;
-        float length = mag * debugForceScale;
+        // float length = mag * debugForceScale;
+        float length = Mathf.Sqrt(Mathf.Pow(hand.y - origin.y, 2) + Mathf.Pow(hand.x - origin.x, 2) + Mathf.Pow(hand.z - origin.z, 2));
 
-        // Cylinder is centered, height is along Y
-        debugForceCylinder.transform.position = origin + dir * (length * 1.5f);
+        // Cylinder is centered, Make it start at origin and end at hand
+        debugForceCylinder.transform.position = origin + dir * (length * 0.5f);
         debugForceCylinder.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir);
         debugForceCylinder.transform.localScale = new Vector3(
             0.02f,
-            length * 1.5f,
+            length,
             0.02f
         );
     }
