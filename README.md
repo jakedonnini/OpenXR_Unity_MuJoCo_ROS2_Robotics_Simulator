@@ -7,7 +7,7 @@ This project aims to combine OpenXR through Unity, MuJoCo physics engine and ROS
 - Install MuJoCo using this for Unity: https://mujoco.readthedocs.io/en/latest/unity.html
 
 # Start the Docker Container
-- Be in OpenXR_Unity_MuJoCo_ROS2_Robotics_Simulator\ros2 directory
+- Be in OpenXR_Unity_MuJoCo_ROS2_Robotics_Simulator\ros2 directory and docker is open
 - build the container: docker build -t ros2_unity_image -f docker/Dockerfile .
 - run the container: docker run -it --rm -p 10000:10000 ros2_unity_image /bin/bash
 - run a new window in the same container: docker exec -it <container_name_or_id> /bin/bash
