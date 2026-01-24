@@ -8,6 +8,8 @@ public class MujocoGrabbableSync : MonoBehaviour
 
     public OVRHand rightHand;
     public OVRHand leftHand;
+    public Transform rightHandAnchor;
+    public Transform leftHandAnchor;
 
     public float kp = 10f;   // stiffness
     public float kd = 1f;    // damping
@@ -42,7 +44,7 @@ public class MujocoGrabbableSync : MonoBehaviour
 
         if (IsGripping(rightHand))
         {
-            ApplyForceFromHand(rightHand);
+            ApplyForceFromHand(rightHand, rightHandAnchor);
         }
         else if (IsGripping(leftHand))
         {
@@ -61,9 +63,13 @@ public class MujocoGrabbableSync : MonoBehaviour
                hand.GetFingerPinchStrength(OVRHand.HandFinger.Index) > 0.75f;
     }
     
-    unsafe void ApplyForceFromHand(OVRHand hand)
+    unsafe void ApplyForceFromHand(OVRHand hand, Transform handAnchor = null)
     {
         Vector3 handPos = hand.transform.position;
+        if (handAnchor != null)
+        {
+            handPos = handAnchor.position;
+        }
         Vector3 objPos  = cubeParent.position;
 
         // --- POSITION ERROR ---
@@ -78,8 +84,8 @@ public class MujocoGrabbableSync : MonoBehaviour
         {
             objVel = new Vector3(
                 (float)MjScene.Instance.Data->qvel[velAdr + 0],
-                (float)MjScene.Instance.Data->qvel[velAdr + 1],
-                (float)MjScene.Instance.Data->qvel[velAdr + 2]
+                (float)MjScene.Instance.Data->qvel[velAdr + 2],
+                (float)MjScene.Instance.Data->qvel[velAdr + 1]
             );
         }
 
@@ -92,9 +98,11 @@ public class MujocoGrabbableSync : MonoBehaviour
 
         // --- APPLY FORCE AT COM ---
         int forceIdx = 6 * bodyId;
+        // unity coords are different from mujoco coords unity: x-right, y-up, z-forward
+        // mujoco: x-forward, y-right, z-up
         MjScene.Instance.Data->xfrc_applied[forceIdx + 0] = positionOffset[0]*force.x;
-        MjScene.Instance.Data->xfrc_applied[forceIdx + 1] = positionOffset[1]*force.y;
-        MjScene.Instance.Data->xfrc_applied[forceIdx + 2] = positionOffset[2]*force.z;
+        MjScene.Instance.Data->xfrc_applied[forceIdx + 1] = positionOffset[1]*force.z;
+        MjScene.Instance.Data->xfrc_applied[forceIdx + 2] = positionOffset[2]*force.y;
 
         // ADD THIS DEBUG
         Debug.Log($"Hand pos: {handPos}, Obj pos: {objPos} Force: {force}");
@@ -143,7 +151,7 @@ public class MujocoGrabbableSync : MonoBehaviour
         debugForceCylinder.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir);
         debugForceCylinder.transform.localScale = new Vector3(
             0.02f,
-            length,
+            length*0.5f,
             0.02f
         );
     }
