@@ -45,12 +45,8 @@ public:
 private:
   void timer_callback()
   {
-
-    if (is_valid_solution(current_joint_angles_, T_target_, 0.05, 0.05)) {
-        RCLCPP_INFO(this->get_logger(), "Reached target within tolerance.");
-        // make arm stop moving
-        return;
-    }
+    Vector7d first_pos;
+    first_pos << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
 
     if (T_target_(0,3) == 0.0 && T_target_(1,3) == 0.0 && T_target_(2,3) == 0.0) {
         RCLCPP_WARN(this->get_logger(), "No target pose set yet.");
@@ -59,31 +55,34 @@ private:
 
     if (count_ < 50) {
         // this is the home position
-        Vector7d first_pos;
-        first_pos << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
-        publish_joint_command(first_pos);
+        if (count_ > 25) { 
+          publish_joint_command(first_pos, 1.0);
+        } else {
+          publish_joint_command(first_pos, 0.0);
+        }
+
         count_++;
         return;
     }
 
-    // Eigen::Matrix4d not_Rot_T = T_target_;
-    // not_Rot_T.block<3,3>(0,0) = Eigen::Matrix3d::Identity(); // keep orientation fixed for now
-    // not_Rot_T(1,1) = -1.0; // make pointing down
-    // not_Rot_T(2,2) = -1.0;
+    Eigen::Matrix4d not_Rot_T = T_target_;
+    not_Rot_T.block<3,3>(0,0) = Eigen::Matrix3d::Identity(); // keep orientation fixed for now
+    not_Rot_T(1,1) = -1.0; // make pointing down
+    not_Rot_T(2,2) = -1.0;
 
     static KinematicsCache cache;
     // IK cache (declared once, reused each loop)
     cache.setConfiguration(current_joint_angles_);
-    Vector7d dq_step = inverse_kinematics_step_optimized(cache, T_target_, 0.8, 0.2);
+    Vector7d dq_step = inverse_kinematics_step_optimized(cache, not_Rot_T, 0.8, 0.2);
 
     target_joint_angles_ = current_joint_angles_ + dq_step; // scale step size
 
     // print joint angeles
-    RCLCPP_INFO(this->get_logger(), "Step %zu: Current Joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
+    RCLCPP_INFO(this->get_logger(), "Step %zu: Current Joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, Gripper: %.2f]",
                 count_,
                 current_joint_angles_[0], current_joint_angles_[1], current_joint_angles_[2],
                 current_joint_angles_[3], current_joint_angles_[4], current_joint_angles_[5],
-                current_joint_angles_[6]);
+                current_joint_angles_[6], gripper_pos_);
     RCLCPP_INFO(this->get_logger(), "          Target  Joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
                 target_joint_angles_[0], target_joint_angles_[1], target_joint_angles_[2],
                 target_joint_angles_[3], target_joint_angles_[4], target_joint_angles_[5],
@@ -110,10 +109,22 @@ private:
     RCLCPP_INFO(this->get_logger(), "Distance to target: X: %.4f, Y: %.4f, Z: %.4f",
                 diff[0], diff[1], diff[2]);
 
+    // if soultion is vaild, close gripper
+    if (is_valid_solution(current_joint_angles_, T_target_, 0.1, 0.1)) {
+      RCLCPP_INFO(this->get_logger(), "Valid solution reached, closing gripper.");
+      
+      gripper_pos_ = 0.0; // close gripper
+      publish_joint_command(first_pos, gripper_pos_);
+      publish_joint_positions(jointPositions);
+      return; // switch to a state matchine in real application
+    } else {
+      gripper_pos_ = 1.0;
+    }
+
     // if (count_ > 1000)
     //     target_joint_angles_ << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
 
-    publish_joint_command(target_joint_angles_);
+    publish_joint_command(target_joint_angles_, gripper_pos_);
     publish_joint_positions(jointPositions);
 
     // Increment step count
