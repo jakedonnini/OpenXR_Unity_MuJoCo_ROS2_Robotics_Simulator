@@ -370,7 +370,7 @@ void KinematicsCache::ensureJacobian() {
     dirty_jac_ = false;
 }
 
-Vector7d inverse_kinematics_step_optimized(
+Vector7d inverse_kinematics_step_optimized_position(
     KinematicsCache& cache,
     const Eigen::Matrix4d& T_target,
     double alpha,
@@ -398,5 +398,41 @@ Vector7d inverse_kinematics_step_optimized(
     dq *= alpha;
     return dq;
 }
+
+Vector7d inverse_kinematics_velocity(
+    KinematicsCache& cache,
+    const Eigen::Matrix4d& T_target,
+    double kp_pos,
+    double kp_rot,
+    double joint_centering_rate
+) {
+    cache.ensureJacobian();
+    const auto& T0e = cache.T0e();
+    const auto& J = cache.J();
+    const auto& q = cache.q();
+
+    Eigen::Vector3d dp = diff_to_target(T0e, T_target);
+    Eigen::Vector3d dtheta = calcAngDiff(
+        T_target.block<3,3>(0,0),
+        T0e.block<3,3>(0,0)
+    );
+
+    // proportional velocity controller
+    Eigen::Matrix<double,6,1> xdot;
+    xdot.head<3>() = kp_pos * dp;
+    xdot.tail<3>() = kp_rot * dtheta;
+
+    Eigen::Matrix<double,7,6> J_pinv = dampedPseudoinverse(J, 0.05);
+
+    Vector7d dq = J_pinv * xdot;
+
+    Vector7d dq_null = joint_centering_task(q, joint_centering_rate);
+    Eigen::Matrix<double,7,7> N = Eigen::Matrix<double,7,7>::Identity() - J_pinv * J;
+
+    dq += N * dq_null;
+
+    return dq;   // <-- joint velocities (rad/s)
+}
+
 
 // (Removed duplicate KinematicsCache implementation block)

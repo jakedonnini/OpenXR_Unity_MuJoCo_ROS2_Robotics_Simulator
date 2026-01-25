@@ -175,10 +175,19 @@ private:
 };
 
 // Optimized IK step using cached FK/Jacobian (single computation per call)
-Vector7d inverse_kinematics_step_optimized(
+Vector7d inverse_kinematics_step_optimized_position(
     KinematicsCache& cache,
     const Eigen::Matrix4d& T_target,
     double alpha = 0.1,
     double joint_centering_rate = 0.1
 );
+
+// IK velocity solver using cached FK/Jacobian
+Vector7d inverse_kinematics_velocity(
+    KinematicsCache& cache,
+    const Eigen::Matrix4d& T_target,
+    double kp_pos,
+    double kp_rot,
+    double joint_centering_rate
+)
 #endif // KINEMATICS_H

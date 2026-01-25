@@ -7,7 +7,8 @@ using Mujoco;
 public class MuJoCoJointStatePublisher : MonoBehaviour
 {
     [Header("ROS Settings")]
-    [SerializeField] private string topicName = "panda_joint_states";
+    [SerializeField] private string topicNamePos = "panda_joint_states_pos";
+    [SerializeField] private string topicNameVel = "panda_joint_states_vel";
     [SerializeField] private float publishRate = 20f; // Hz
     
     [Header("MuJoCo Joints")]
@@ -26,9 +27,9 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
     {
         // Connect to ROS and register publisher
         ros = ROSConnection.GetOrCreateInstance();
-        ros.RegisterPublisher<JointCommandMsg>(topicName);
-        
-        Debug.Log($"Publishing joint states to {topicName} at {publishRate} Hz");
+        ros.RegisterPublisher<JointCommandMsg>(topicNamePos);
+        ros.RegisterPublisher<JointCommandMsg>(topicNameVel);
+        Debug.Log($"Publishing joint states to {topicNamePos} and {topicNameVel} at {publishRate} Hz");
     }
     
     void Update()
@@ -42,6 +43,7 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
                 PublishAcutatorStates();
             else
                 PublishJointStates();
+                PublishJointVelocities();
             publishTimer = 0f;
         }
     }
@@ -83,7 +85,47 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
         // Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
         
         // Publish to ROS
-        ros.Publish(topicName, msg);
+        ros.Publish(topicNamePos, msg);
+    }
+
+    void PublishJointVelocities()
+    {
+        // Create message
+        var msg = new JointCommandMsg();
+        
+        // Set header with timestamp
+        msg.header = new HeaderMsg();
+        var currentTime = Time.realtimeSinceStartup;
+        //msg.header.stamp.sec = (int)currentTime;
+        //msg.header.stamp.nanosec = (uint)((currentTime % 1) * 1e9);
+        msg.header.frame_id = "panda_link0";
+        
+        msg.joint_angles = new double[7];
+        msg.command_type = "state_velocity"; 
+        
+        // Read current joint velocities from MuJoCo
+        for (int i = 0; i < 7 && i < joints.Length; i++)
+        {
+            if (joints[i] != null)
+            {
+                // Get joint velocity in radians per second (try these alternatives):
+                // convert to radians
+                msg.joint_angles[i] = joints[i].Velocity * Mathf.Deg2Rad;
+            }
+            else
+            {
+                Debug.LogWarning($"Joint {i} is not assigned!");
+                msg.joint_angles[i] = 0.0;
+            }
+        }
+
+        // publish gripper velocity
+        msg.gripper_pos = gripperJoint.Velocity;
+
+        // Debug.Log($"Publishing joint velocities: [{string.Join(", ", msg.joint_angles)}]");
+        
+        // Publish to ROS
+        ros.Publish(topicNameVel, msg);
     }
 
     void PublishAcutatorStates()
