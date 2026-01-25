@@ -6,8 +6,7 @@ using Mujoco;
 public class MuJoCoJointController : MonoBehaviour
 {
     [Header("ROS Settings")]
-    [SerializeField] private string topicNamePos = "arm_joint_commands_pos";
-    [SerializeField] private string topicNameVel = "arm_joint_commands_vel";
+    [SerializeField] private string topicName = "arm_joint_commands";
     [SerializeField] public enum ControlMode { Position, Velocity }
 
     [Header("MuJoCo Joints")]
@@ -26,11 +25,11 @@ public class MuJoCoJointController : MonoBehaviour
     {
         // Connect to ROS
         ros = ROSConnection.GetOrCreateInstance();
+        ros.RegisterPublisher<JointCommandMsg>(topicName);
         if (controlMode == ControlMode.Position)
         {
-            ros.RegisterPublisher<JointCommandMsg>(topicNamePos);
-            ros.Subscribe<JointCommandMsg>(topicNamePos, OnJointCommandReceived);
-            Debug.Log($"Subscribed to {topicNamePos}");
+            ros.Subscribe<JointCommandMsg>(topicName, OnJointCommandReceived);
+            Debug.Log($"Subscribed to {topicName}");
 
             // switch actuators to position mode if needed
             for (int i = 0; i < jointActuators.Length; i++)
@@ -43,10 +42,10 @@ public class MuJoCoJointController : MonoBehaviour
         }
         else if (controlMode == ControlMode.Velocity)
         {
-            ros.RegisterPublisher<JointCommandMsg>(topicNameVel);
-            ros.Subscribe<JointCommandMsg>(topicNameVel, OnJointVelocityCommandReceived);
+            ros.RegisterPublisher<JointCommandMsg>(topicName);
+            ros.Subscribe<JointCommandMsg>(topicName, OnJointVelocityCommandReceived);
 
-            Debug.Log($"Subscribed to {topicNameVel}");
+            Debug.Log($"Subscribed to {topicName}");
 
             // switch actuators to velocity mode if needed
             for (int i = 0; i < jointActuators.Length; i++)
@@ -94,6 +93,7 @@ public class MuJoCoJointController : MonoBehaviour
     // Alternative method if using velocity control
     void OnJointVelocityCommandReceived(JointCommandMsg msg)
     {
+        Debug.Log($"Received joint velocity command message. {msg.joint_angles}");
         if (msg.command_type != "velocity_joint")
         {
             Debug.LogWarning($"Received unexpected command type: {msg.command_type}");

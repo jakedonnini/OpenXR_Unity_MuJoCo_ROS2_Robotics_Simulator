@@ -63,14 +63,18 @@ private:
           open_gripper();
         } else {
           close_gripper();
-          move_arm_home();
+          // move_arm_home_pos();
         }
-
         count_++;
         return;
     }
 
-    
+    bool success = move_arm_step_vel(cache, T_target_);
+
+    if (success) {
+      RCLCPP_INFO(this->get_logger(), "Reached target position.");
+      close_gripper();
+    }
 
     // Increment step count
     count_++;
@@ -85,6 +89,9 @@ private:
     double sol_tol_pos=0.1, 
     double sol_tol_angle=0.1)
   {
+
+    Eigen::Matrix3d R_target = T_target_.block<3,3>(0,0);
+
     // only keep rotation around Z axis for now
     Eigen::Vector3d z_down(0, 0, -1);
 
@@ -107,6 +114,12 @@ private:
     cache.setConfiguration(current_joint_angles_);
     Vector7d dq_step = inverse_kinematics_velocity(cache, T_down, kp_pos, kp_rot, joint_centering_rate);
 
+    RCLCPP_INFO(this->get_logger(), "Step %zu: Current vel: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, Gripper: %.2f, Target Gripper: %.2f]",
+                count_,
+                dq_step[0], dq_step[1], dq_step[2],
+                dq_step[3], dq_step[4], dq_step[5],
+                dq_step[6], gripper_current_pos_, gripper_target_pos_);
+
     // if soultion is vaild, closing gripper happens outsdie this function
     if (is_valid_solution(current_joint_angles_, T_down, sol_tol_pos, sol_tol_angle)) {
       RCLCPP_INFO(this->get_logger(), "Valid solution reached, closing gripper.");
@@ -128,6 +141,8 @@ private:
     double sol_tol_pos=0.1, 
     double sol_tol_angle=0.1)
   {
+    Eigen::Matrix3d R_target = T_target_.block<3,3>(0,0);
+
     // only keep rotation around Z axis for now
     Eigen::Vector3d z_down(0, 0, -1);
 
@@ -206,13 +221,16 @@ private:
   void close_gripper()
   {
     gripper_target_pos_ = 0.0; // closed
+    // publish both position and velocity commands to ensure gripper moves
     publish_joint_command_pos(current_joint_angles_, gripper_target_pos_);
+    publish_joint_command_vel(current_joint_velocities_, gripper_target_pos_);
   }
 
   void open_gripper()
   {
     gripper_target_pos_ = 1.0; // open
     publish_joint_command_pos(current_joint_angles_, gripper_target_pos_);
+    publish_joint_command_vel(current_joint_velocities_, gripper_target_pos_);
   }
 
   void pose_callback(const unity_robotics_demo_msgs::msg::PosRot::SharedPtr msg)
@@ -301,10 +319,17 @@ private:
     joint_pos_publisher_->publish(msg);
   }
 
+  // struct to represent a command to arm
+  struct Command {
+      virtual bool step() = 0;
+      virtual ~Command() = default;
+  };
+
   rclcpp::Publisher<panda_kinematics::msg::JointCommand>::SharedPtr joint_cmd_publisher_;
   rclcpp::Publisher<panda_kinematics::msg::AllJointPos>::SharedPtr joint_pos_publisher_;
   rclcpp::Subscription<unity_robotics_demo_msgs::msg::PosRot>::SharedPtr pose_subscriber_;
   rclcpp::Subscription<panda_kinematics::msg::JointCommand>::SharedPtr joint_state_subscriber_;
+  rclcpp::Subscription<panda_kinematics::msg::JointCommand>::SharedPtr joint_vel_subscriber_;
   Vector7d current_joint_angles_; // where the arm is currently
   Vector7d current_joint_velocities_; // where the arm is currently
   Vector7d target_joint_velocities_;

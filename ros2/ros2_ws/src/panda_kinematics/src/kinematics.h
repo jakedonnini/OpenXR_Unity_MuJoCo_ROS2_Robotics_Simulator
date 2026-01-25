@@ -189,5 +189,5 @@ Vector7d inverse_kinematics_velocity(
     double kp_pos,
     double kp_rot,
     double joint_centering_rate
-)
+);
 #endif // KINEMATICS_H
