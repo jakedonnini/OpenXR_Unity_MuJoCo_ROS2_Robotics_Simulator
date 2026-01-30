@@ -92,6 +92,8 @@ bool ArmController::move_arm_step_vel(
   // caluate the time step between this step and last
   double dt = this->now().seconds() - last_time_;
 
+  RCLCPP_INFO(this->get_logger(), "Delta time for this step: %.4f seconds", dt);
+
   Eigen::Matrix3d R_target = T_target_.block<3,3>(0,0);
 
   // only keep rotation around Z axis for now
@@ -249,6 +251,11 @@ rclcpp::Time ArmController::now() {
 
 void ArmController::timer_callback()
 {
+  // if (T_target_(0,3) == 0.0 && T_target_(1,3) == 0.0 && T_target_(2,3) == 0.0) {
+  //     RCLCPP_WARN(this->get_logger(), "No target pose set yet.");
+  //     return; // no target set yet
+  // }
+
   count_++;
   
   // State machine for command execution

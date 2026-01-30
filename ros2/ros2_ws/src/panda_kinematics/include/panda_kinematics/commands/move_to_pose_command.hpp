@@ -29,7 +29,7 @@ public:
     MoveToPoseCommand(
         ArmController* controller,
         const Eigen::Matrix4d& target_pose,
-        double pos_tolerance = 0.01,
+        double pos_tolerance = 0.05,
         double angle_tolerance = 0.05,
         double timeout = 30.0
     );
