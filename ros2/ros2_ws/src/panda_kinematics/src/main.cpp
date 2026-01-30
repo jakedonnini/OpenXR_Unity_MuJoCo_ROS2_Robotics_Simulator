@@ -1,0 +1,9 @@
+#include "panda_kinematics/arm_controller.hpp"
+
+int main(int argc, char * argv[])
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<panda_arm_controller::ArmController>());
+  rclcpp::shutdown();
+  return 0;
+}

@@ -24,13 +24,24 @@ include_directories(include ${EIGEN3_INCLUDE_DIR})
 
 # Build the arm controller node
 add_executable(panda_arm_controller 
+  src/main.cpp
   src/panda_arm_controller.cpp
   src/kinematics.cpp
+  src/commands/callback_command.cpp
+  src/commands/gripper_command.cpp
+  src/commands/move_home_command.cpp
+  src/commands/move_to_pose_command.cpp
+  src/commands/wait_command.cpp
 )
 
 find_package(unity_robotics_demo_msgs REQUIRED)
 
 ament_target_dependencies(panda_arm_controller rclcpp Eigen3 unity_robotics_demo_msgs)
+
+target_include_directories(panda_arm_controller PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 
 # Link the custom message to the executable
 rosidl_target_interfaces(panda_arm_controller 
