@@ -1,5 +1,5 @@
 #include "panda_kinematics/commands/move_home_command.hpp"
-#include "panda_kinematics/arm_controller.hpp"
+#include "panda_kinematics/panda_arm_controller.hpp"
 
 namespace panda_kinematics {
 

@@ -38,7 +38,7 @@ public:
      * 
      * Use this for cleanup, logging, or triggering follow-up actions.
      */
-    virtual void on_complete(bool success) {}
+    virtual void on_complete([[maybe_unused]] bool success) {}
     
     /**
      * @brief Get maximum execution time for this command

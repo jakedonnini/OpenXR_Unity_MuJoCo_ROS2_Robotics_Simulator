@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
-#include "kinematics.h"
+#include "panda_kinematics/kinematics.h"
 
 // Helper function: homogeneous transform using DH parameters
 Eigen::Matrix4d Ai(double a_i, double alpha_i, double d_i, double theta_i) {

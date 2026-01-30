@@ -5,15 +5,16 @@
 #include <memory>
 #include <queue>
 #include "rclcpp/rclcpp.hpp"
-#include "kinematics.h"
+#include "panda_kinematics/kinematics.h"
 #include "panda_kinematics/msg/joint_command.hpp" 
 #include "unity_robotics_demo_msgs/msg/pos_rot.hpp"
 #include "panda_kinematics/msg/all_joint_pos.hpp"
 #include "panda_kinematics/commands/robot_command.hpp"
 
+
 using namespace std::chrono_literals;
 
-namespace panda_arm_controller {
+namespace panda_kinematics {
 
 /**
  * @brief Main controller for the Panda robot arm with command queue system
@@ -33,7 +34,7 @@ public:
      * @brief Add a command to the execution queue
      * @param cmd Unique pointer to the command to add
      */
-    void add_command(std::unique_ptr<RobotCommand> cmd);
+    void add_command(std::unique_ptr<panda_kinematics::RobotCommand> cmd);
 
     /**
      * @brief Clear all pending commands from the queue
@@ -174,8 +175,8 @@ private:
   
   // Command queue state
   State state_;
-  std::queue<std::unique_ptr<RobotCommand>> command_queue_;
-  std::unique_ptr<RobotCommand> current_command_;
+  std::queue<std::unique_ptr<panda_kinematics::RobotCommand>> command_queue_;
+  std::unique_ptr<panda_kinematics::RobotCommand> current_command_;
   rclcpp::Time command_start_time_;
   
   size_t count_;

@@ -1,4 +1,4 @@
-#include "panda_kinematics/arm_controller.hpp"
+#include "panda_kinematics/panda_arm_controller.hpp"
 #include "panda_kinematics/commands/move_to_pose_command.hpp"
 #include "panda_kinematics/commands/gripper_command.hpp"
 #include "panda_kinematics/commands/wait_command.hpp"

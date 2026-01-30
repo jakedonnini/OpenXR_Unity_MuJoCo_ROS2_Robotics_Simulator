@@ -1,4 +1,4 @@
-#include "panda_kinematics/arm_controller.hpp"
+#include "panda_kinematics/panda_arm_controller.hpp"
 
 int main(int argc, char * argv[])
 {
