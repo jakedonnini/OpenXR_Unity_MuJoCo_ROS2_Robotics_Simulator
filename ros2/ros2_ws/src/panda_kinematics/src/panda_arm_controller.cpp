@@ -42,7 +42,7 @@ ArmController::ArmController() : Node("arm_controller"), count_(0)
   T_target_ = Eigen::Matrix4d::Identity();
   gripper_current_pos_ = 0.0;
   gripper_target_pos_ = 0.0;
-  last_time = 0.0;
+  last_time_ = 0.0;
   
   state_ = State::IDLE;
   current_command_ = nullptr;
@@ -79,18 +79,18 @@ size_t ArmController::queue_size() const {
 bool ArmController::move_arm_step_vel(
   KinematicsCache& cache, 
   const Eigen::Matrix4d& T_target, 
-  double kp_pos=1.0, 
-  double kp_rot=1.0, 
-  double joint_centering_rate=0.2, 
-  double sol_tol_pos=0.1, 
-  double sol_tol_angle=0.1)
+  double kp_pos, 
+  double kp_rot, 
+  double joint_centering_rate, 
+  double sol_tol_pos, 
+  double sol_tol_angle)
 {
   // its the first time set dt to 0 to avoid huge steps
-  if (last_time == 0)
-    last_time = this->now();
+  if (last_time_ == 0)
+    last_time_ = this->now().seconds();
 
   // caluate the time step between this step and last
-  float dt = this->now() - last_time;
+  double dt = this->now().seconds() - last_time_;
 
   Eigen::Matrix3d R_target = T_target_.block<3,3>(0,0);
 
@@ -116,7 +116,7 @@ bool ArmController::move_arm_step_vel(
   cache.setConfiguration(current_joint_angles_);
   Vector7d dq_step = inverse_kinematics_velocity(cache, T_down, kp_pos, kp_rot, joint_centering_rate);
 
-  target_joint_angles_ = current_joint_angles_ + dq_step * dt;
+  target_joint_angles_ = current_joint_angles_ + dq_step * static_cast<float>(dt);
 
   RCLCPP_INFO(this->get_logger(), "Step %zu: Current vel: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, Gripper: %.2f, Target Gripper: %.2f]",
               count_,
@@ -127,7 +127,7 @@ bool ArmController::move_arm_step_vel(
   // if soultion is vaild, closing gripper happens outsdie this function
   if (is_valid_solution(current_joint_angles_, T_down, sol_tol_pos, sol_tol_angle)) {
     RCLCPP_INFO(this->get_logger(), "Valid solution reached, closing gripper.");
-    last_time = 0.0;
+    last_time_ = 0.0;
     return true; // switch to a state matchine in real application
   } 
 
@@ -135,7 +135,7 @@ bool ArmController::move_arm_step_vel(
   const auto& jointPositions = cache.jointPositions();
   publish_joint_positions(jointPositions);
 
-  last_time = this->now();
+  last_time_ = this->now().seconds();
   return false;
 }
 
@@ -143,10 +143,10 @@ bool ArmController::move_arm_step_vel(
 bool ArmController::move_arm_step_pos(
   KinematicsCache& cache, 
   const Eigen::Matrix4d& T_target, 
-  double step_size=0.8, 
-  double joint_centering_rate=0.2, 
-  double sol_tol_pos=0.1, 
-  double sol_tol_angle=0.1)
+  double step_size, 
+  double joint_centering_rate, 
+  double sol_tol_pos, 
+  double sol_tol_angle)
 {
   Eigen::Matrix3d R_target = T_target_.block<3,3>(0,0);
 
@@ -366,7 +366,7 @@ void ArmController::joint_state_callback_vel(const panda_kinematics::msg::JointC
   }
 }
 
-void ArmController::publish_joint_command_pos(const Vector7d& joint_angles, float gripper_pos=0.0)
+void ArmController::publish_joint_command_pos(const Vector7d& joint_angles, float gripper_pos)
 {
   // gripper: 1 open, 0 closed
   auto msg = panda_kinematics::msg::JointCommand();
@@ -384,7 +384,7 @@ void ArmController::publish_joint_command_pos(const Vector7d& joint_angles, floa
   joint_cmd_publisher_->publish(msg);
 }
 
-void ArmController::publish_joint_command_vel(const Vector7d& joint_vels, float gripper_pos=0.0)
+void ArmController::publish_joint_command_vel(const Vector7d& joint_vels, float gripper_pos)
 {
   // gripper: 1 open, 0 closed
   auto msg = panda_kinematics::msg::JointCommand();

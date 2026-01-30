@@ -171,7 +171,7 @@ private:
   float gripper_target_pos_;
   Eigen::Matrix4d T_target_;
   KinematicsCache cache_;
-  float last_time;
+  double last_time_;
   
   // Command queue state
   State state_;
