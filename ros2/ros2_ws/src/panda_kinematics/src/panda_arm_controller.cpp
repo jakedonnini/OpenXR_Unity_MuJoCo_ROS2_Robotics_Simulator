@@ -94,7 +94,7 @@ bool ArmController::move_arm_step_vel(
 
   RCLCPP_INFO(this->get_logger(), "Delta time for this step: %.4f seconds", dt);
 
-  Eigen::Matrix3d R_target = T_target_.block<3,3>(0,0);
+  Eigen::Matrix3d R_target = T_target.block<3,3>(0,0);
 
   // only keep rotation around Z axis for now
   Eigen::Vector3d z_down(0, 0, -1);
@@ -150,7 +150,7 @@ bool ArmController::move_arm_step_pos(
   double sol_tol_pos, 
   double sol_tol_angle)
 {
-  Eigen::Matrix3d R_target = T_target_.block<3,3>(0,0);
+  Eigen::Matrix3d R_target = T_target.block<3,3>(0,0);
 
   // only keep rotation around Z axis for now
   Eigen::Vector3d z_down(0, 0, -1);
@@ -222,24 +222,37 @@ bool ArmController::move_arm_step_pos(
 // sets the arm to home position
 void ArmController::move_arm_home_pos()
 {
-  Vector7d first_pos;
-  first_pos << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
-  publish_joint_command_pos(first_pos, gripper_target_pos_);
+  target_joint_angles_ << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
+  publish_joint_command_pos(target_joint_angles_, gripper_target_pos_);
+}
+
+bool ArmController::reached_arm_home_position()
+{
+  target_joint_angles_ << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
+  double tol = 0.05; // radians
+  for (int i = 0; i < 7; i++) {
+    if (std::abs(current_joint_angles_[i] - target_joint_angles_[i]) > tol) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void ArmController::close_gripper()
 {
-  gripper_target_pos_ = 0.0; // closed
-  publish_joint_command_pos(current_joint_angles_, gripper_target_pos_);
+  gripper_target_pos_ = GRIPPER_CLOSED_POS_; // closed
+  publish_joint_command_pos(target_joint_angles_, gripper_target_pos_);
 }
 
 void ArmController::open_gripper()
 {
-  gripper_target_pos_ = 1.0; // open
-  publish_joint_command_pos(current_joint_angles_, gripper_target_pos_);
+  gripper_target_pos_ = GRIPPER_OPEN_POS_; // open
+  publish_joint_command_pos(target_joint_angles_, gripper_target_pos_);
 }
 
 bool ArmController::gripper_reached_target(double tolerance) const {
+  // RCLCPP_INFO(this->get_logger(), "Gripper current pos: %.4f, target pos: %.4f, tolerance: %.4f",
+  //             gripper_current_pos_, gripper_target_pos_, tolerance);
   return std::abs(gripper_current_pos_ - gripper_target_pos_) < tolerance;
 }
 

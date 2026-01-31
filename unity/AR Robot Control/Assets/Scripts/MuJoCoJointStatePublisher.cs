@@ -82,7 +82,7 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
         // publish gripper position
         msg.gripper_pos = gripperJoint.Configuration;
 
-        // Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
+        Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
         
         // Publish to ROS
         ros.Publish(topicNamePos, msg);

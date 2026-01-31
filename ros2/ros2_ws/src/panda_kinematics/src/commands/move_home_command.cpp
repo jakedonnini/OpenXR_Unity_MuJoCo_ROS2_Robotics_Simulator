@@ -19,10 +19,7 @@ bool MoveHomeCommand::execute() {
         started_ = true;
     }
     
-    // TODO: Implement proper home position check
-    // For now, assume it completes immediately
-    // In production, you'd check if current joint angles match home position
-    return true;
+    return controller_->reached_arm_home_position();
 }
 
 } // namespace panda_kinematics

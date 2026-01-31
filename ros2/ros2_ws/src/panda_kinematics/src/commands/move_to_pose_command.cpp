@@ -24,13 +24,21 @@ void MoveToPoseCommand::on_start() {
 
 bool MoveToPoseCommand::execute() {
     auto& cache = controller_->get_cache();
-    return controller_->move_arm_step_vel(
-        cache, 
-        target_pose_, 
-        1.0,  // kp_pos
-        1.0,  // kp_rot
+    // return controller_->move_arm_step_vel(
+    //     cache, 
+    //     target_pose_, 
+    //     1.0,  // kp_pos
+    //     1.0,  // kp_rot
+    //     0.2,  // joint_centering_rate
+    //     pos_tolerance_, 
+    //     angle_tolerance_
+    // );
+    return controller_->move_arm_step_pos(
+        cache,
+        target_pose_,
+        0.8,  // step_size
         0.2,  // joint_centering_rate
-        pos_tolerance_, 
+        pos_tolerance_,
         angle_tolerance_
     );
 }

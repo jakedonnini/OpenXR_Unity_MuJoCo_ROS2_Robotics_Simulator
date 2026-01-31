@@ -98,6 +98,12 @@ public:
     void move_arm_home_pos();
 
     /**
+     * @brief Check if arm has reached predefined home position
+     * @return true if reached home position
+     */
+    bool reached_arm_home_position();
+
+    /**
      * @brief Check if gripper has reached its target position
      * @param tolerance Position tolerance (default: 0.05)
      * @return true if within tolerance
@@ -156,30 +162,34 @@ private:
     // Member Variables
 
     // ROS communication
-  rclcpp::Publisher<panda_kinematics::msg::JointCommand>::SharedPtr joint_cmd_publisher_;
-  rclcpp::Publisher<panda_kinematics::msg::AllJointPos>::SharedPtr joint_pos_publisher_;
-  rclcpp::Subscription<unity_robotics_demo_msgs::msg::PosRot>::SharedPtr pose_subscriber_;
-  rclcpp::Subscription<panda_kinematics::msg::JointCommand>::SharedPtr joint_state_subscriber_;
-  rclcpp::Subscription<panda_kinematics::msg::JointCommand>::SharedPtr joint_vel_subscriber_;
-  rclcpp::TimerBase::SharedPtr timer_;
-  
-  // Robot state
-  Vector7d current_joint_angles_;
-  Vector7d current_joint_velocities_;
-  Vector7d target_joint_angles_;
-  float gripper_current_pos_;
-  float gripper_target_pos_;
-  Eigen::Matrix4d T_target_;
-  KinematicsCache cache_;
-  double last_time_;
-  
-  // Command queue state
-  State state_;
-  std::queue<std::unique_ptr<panda_kinematics::RobotCommand>> command_queue_;
-  std::unique_ptr<panda_kinematics::RobotCommand> current_command_;
-  rclcpp::Time command_start_time_;
-  
-  size_t count_;
+    rclcpp::Publisher<panda_kinematics::msg::JointCommand>::SharedPtr joint_cmd_publisher_;
+    rclcpp::Publisher<panda_kinematics::msg::AllJointPos>::SharedPtr joint_pos_publisher_;
+    rclcpp::Subscription<unity_robotics_demo_msgs::msg::PosRot>::SharedPtr pose_subscriber_;
+    rclcpp::Subscription<panda_kinematics::msg::JointCommand>::SharedPtr joint_state_subscriber_;
+    rclcpp::Subscription<panda_kinematics::msg::JointCommand>::SharedPtr joint_vel_subscriber_;
+    rclcpp::TimerBase::SharedPtr timer_;
+
+    // constants
+    const double GRIPPER_OPEN_POS_ = 0.04;
+    const double GRIPPER_CLOSED_POS_ = 0.0;
+    
+    // Robot state
+    Vector7d current_joint_angles_;
+    Vector7d current_joint_velocities_;
+    Vector7d target_joint_angles_;
+    float gripper_current_pos_;
+    float gripper_target_pos_;
+    Eigen::Matrix4d T_target_;
+    KinematicsCache cache_;
+    double last_time_;
+    
+    // Command queue state
+    State state_;
+    std::queue<std::unique_ptr<panda_kinematics::RobotCommand>> command_queue_;
+    std::unique_ptr<panda_kinematics::RobotCommand> current_command_;
+    rclcpp::Time command_start_time_;
+    
+    size_t count_;
 }; // class
 
 } // namespace panda_arm_controller

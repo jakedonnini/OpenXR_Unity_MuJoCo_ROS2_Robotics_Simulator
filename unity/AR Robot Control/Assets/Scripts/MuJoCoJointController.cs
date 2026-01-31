@@ -87,13 +87,13 @@ public class MuJoCoJointController : MonoBehaviour
 
         jointActuators[7].Control = (float)msg.gripper_pos; // Gripper control
         
-        // Debug.Log($"Applied joint angles: [{string.Join(", ", msg.joint_angles)}]");
+        Debug.Log($"Applied joint angles: [{string.Join(", ", msg.joint_angles)}]");
     }
     
     // Alternative method if using velocity control
     void OnJointVelocityCommandReceived(JointCommandMsg msg)
     {
-        Debug.Log($"Received joint velocity command message. {msg.joint_angles}");
+        Debug.Log($"Received joint velocity command message. [{string.Join(", ", msg.joint_angles)}]");
         if (msg.command_type != "velocity_joint")
         {
             Debug.LogWarning($"Received unexpected command type: {msg.command_type}");
