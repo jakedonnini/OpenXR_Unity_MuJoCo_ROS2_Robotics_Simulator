@@ -126,6 +126,30 @@ bool ArmController::move_arm_step_vel(
               dq_step[3], dq_step[4], dq_step[5],
               dq_step[6], gripper_current_pos_, gripper_target_pos_);
 
+  RCLCPP_INFO(this->get_logger(), "          Target  Joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
+              target_joint_angles_[0], target_joint_angles_[1], target_joint_angles_[2],
+              target_joint_angles_[3], target_joint_angles_[4], target_joint_angles_[5],
+              target_joint_angles_[6]);
+
+  RCLCPP_INFO(this->get_logger(), "          current joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
+              current_joint_angles_[0], current_joint_angles_[1], current_joint_angles_[2],
+              current_joint_angles_[3], current_joint_angles_[4], current_joint_angles_[5],
+              current_joint_angles_[6]);
+
+  RCLCPP_INFO(this->get_logger(), "          Target Pose: Pos(%.2f, %.2f, %.2f) Rot:\n[%.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f]",
+              T_down(0, 3), T_down(1, 3), T_down(2, 3),
+              T_down(0, 0), T_down(0, 1), T_down(0, 2),
+              T_down(1, 0), T_down(1, 1), T_down(1, 2),
+              T_down(2, 0), T_down(2, 1), T_down(2, 2));
+
+  RCLCPP_INFO(this->get_logger(), "          Current Pose: Pos(%.2f, %.2f, %.2f) Rot:\n[%.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f]",
+              cache.T0e()(0, 3),
+              cache.T0e()(1, 3),
+              cache.T0e()(2, 3),
+              cache.T0e()(0, 0), cache.T0e()(0, 1), cache.T0e()(0, 2),
+              cache.T0e()(1, 0), cache.T0e()(1, 1), cache.T0e()(1, 2),
+              cache.T0e()(2, 0), cache.T0e()(2, 1), cache.T0e()(2, 2));
+
   // if soultion is vaild, closing gripper happens outsdie this function
   if (is_valid_solution(current_joint_angles_, T_down, sol_tol_pos, sol_tol_angle)) {
     RCLCPP_INFO(this->get_logger(), "Valid solution reached, closing gripper.");
@@ -448,7 +472,15 @@ void ArmController::load_demo_sequence() {
   add_command(std::make_unique<WaitCommand>(this, 1.0));
   
   // 4. Move to pick position following the cube
-  add_command(std::make_unique<MoveToPoseCommand>(this, T_target_));
+  Eigen::Matrix4d place_pose_1 = Eigen::Matrix4d::Identity();
+  place_pose_1(0, 3) = 0.4;
+  place_pose_1(1, 3) = 0.0;
+  place_pose_1(2, 3) = 0.3;
+  add_command(std::make_unique<MoveToPoseCommand>(this, place_pose_1));
+
+  add_command(std::make_unique<WaitCommand>(this, 2.0)); // wait for cube to settle
+
+  add_command(std::make_unique<MoveToPoseCommand>(this, std::ref(T_target_), MoveToPoseCommand::ByReference{}));
   
   // 5. Close gripper
   add_command(std::make_unique<CloseGripperCommand>(this));
@@ -457,11 +489,11 @@ void ArmController::load_demo_sequence() {
   add_command(std::make_unique<WaitCommand>(this, 0.5));
   
   // 7. Move to place position
-  Eigen::Matrix4d place_pose = Eigen::Matrix4d::Identity();
-  place_pose(0, 3) = 0.0;
-  place_pose(1, 3) = 0.3;
-  place_pose(2, 3) = 0.4;
-  add_command(std::make_unique<MoveToPoseCommand>(this, place_pose));
+  Eigen::Matrix4d place_pose_2 = Eigen::Matrix4d::Identity();
+  place_pose_2(0, 3) = 0.4;
+  place_pose_2(1, 3) = -0.2;
+  place_pose_2(2, 3) = 0.3;
+  add_command(std::make_unique<MoveToPoseCommand>(this, place_pose_2));
   
   // 8. Open gripper
   add_command(std::make_unique<OpenGripperCommand>(this));

@@ -61,8 +61,8 @@ public:
     bool move_arm_step_vel(
         KinematicsCache& cache, 
         const Eigen::Matrix4d& T_target, 
-        double kp_pos = 1.0, 
-        double kp_rot = 1.0, 
+        double kp_pos = 10.0, 
+        double kp_rot = 5.0, 
         double joint_centering_rate = 0.2, 
         double sol_tol_pos = 0.1, 
         double sol_tol_angle = 0.1

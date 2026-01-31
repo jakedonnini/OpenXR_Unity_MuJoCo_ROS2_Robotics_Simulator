@@ -26,11 +26,23 @@ public:
      * @param angle_tolerance Angle tolerance in radians (default: 0.05 rad ≈ 3°)
      * @param timeout Maximum execution time in seconds (default: 30s)
      */
+    // Constructor for static poses (copy)
     MoveToPoseCommand(
         ArmController* controller,
         const Eigen::Matrix4d& target_pose,
         double pos_tolerance = 0.05,
-        double angle_tolerance = 0.05,
+        double angle_tolerance = 0.1,
+        double timeout = 30.0
+    );
+    
+    // Constructor for dynamic poses (reference) - use a tag type to disambiguate
+    struct ByReference {};
+    MoveToPoseCommand(
+        ArmController* controller,
+        const Eigen::Matrix4d& target_pose,
+        ByReference,  // Tag to distinguish from copy constructor
+        double pos_tolerance = 0.05,
+        double angle_tolerance = 0.1,
         double timeout = 30.0
     );
     
@@ -41,7 +53,9 @@ public:
 
 private:
     ArmController* controller_;
-    Eigen::Matrix4d target_pose_;
+    const Eigen::Matrix4d* target_pose_ptr_;  // Pointer for flexibility
+    Eigen::Matrix4d target_pose_copy_;         // Copy for static poses
+    bool use_reference_;                       // Track which to use
     double pos_tolerance_;
     double angle_tolerance_;
     double timeout_;
