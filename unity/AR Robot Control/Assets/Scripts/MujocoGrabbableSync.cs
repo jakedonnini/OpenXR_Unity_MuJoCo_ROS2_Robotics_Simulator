@@ -77,17 +77,18 @@ public class MujocoGrabbableSync : MonoBehaviour
     unsafe void ApplyForceFromHand(OVRHand hand, Transform handAnchor = null)
     {
         Vector3 handPos = hand.transform.position;
+        Debug.Log($"Hand Position: {handPos}");
         Quaternion handRot = hand.transform.rotation;
         // use the hand anchor point instead if provided
-        if (handAnchor != null)
-        {
-            handPos = handAnchor.position;
-            handRot = handAnchor.rotation;
-        }
+        // if (handAnchor != null)
+        // {
+        //     handPos = handAnchor.position;
+        //     handRot = handAnchor.rotation;
+        // }
 
         handPos += handRot * Vector3.forward * pinchDistance; // offset forward a bit to match grab point
         handPos += handRot * Vector3.up * -pinchDistance; // offset up a bit to match grab point
-
+        Debug.Log($"Hand Position afters: {handPos}");
         Vector3 objPos  = cubeParent.position;
         Quaternion objRot = cubeParent.rotation;
 
