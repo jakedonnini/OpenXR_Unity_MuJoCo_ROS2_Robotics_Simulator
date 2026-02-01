@@ -36,7 +36,7 @@ public class MuJoCoJointController : MonoBehaviour
             {
                 if (jointActuators[i] != null)
                 {
-                    jointActuators[i].Type = MjActuator.ActuatorType.General;
+                    jointActuators[i].Type = MjActuator.ActuatorType.Position;
                 }
             }
         }
@@ -57,7 +57,7 @@ public class MuJoCoJointController : MonoBehaviour
             }
 
             // gripper is awlays in general mode
-            jointActuators[7].Type = MjActuator.ActuatorType.General; // assuming 8th actuator is gripper
+            jointActuators[7].Type = MjActuator.ActuatorType.Position; // assuming 8th actuator is gripper
         }
     }
     

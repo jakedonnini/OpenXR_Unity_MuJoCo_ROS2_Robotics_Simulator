@@ -9,7 +9,7 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
     [Header("ROS Settings")]
     [SerializeField] private string topicNamePos = "panda_joint_states_pos";
     [SerializeField] private string topicNameVel = "panda_joint_states_vel";
-    [SerializeField] private float publishRate = 20f; // Hz
+    [SerializeField] private float publishRate = 100f; // Hz
     
     [Header("MuJoCo Joints")]
     [SerializeField] private MjHingeJoint[] joints = new MjHingeJoint[7];
@@ -82,7 +82,7 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
         // publish gripper position
         msg.gripper_pos = gripperJoint.Configuration;
 
-        Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
+        // Debug.Log($"Publishing joint states: [{string.Join(", ", msg.joint_angles)}]");
         
         // Publish to ROS
         ros.Publish(topicNamePos, msg);

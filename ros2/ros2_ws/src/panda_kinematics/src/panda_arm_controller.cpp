@@ -33,7 +33,7 @@ ArmController::ArmController() : Node("arm_controller"), count_(0)
     std::bind(&ArmController::joint_state_callback_vel, this, std::placeholders::_1));
 
   timer_ = this->create_wall_timer(
-    100ms, std::bind(&ArmController::timer_callback, this));
+    50ms, std::bind(&ArmController::timer_callback, this));
   
   // Initialize current joint positions to zero
   current_joint_angles_.setZero();
@@ -83,14 +83,17 @@ bool ArmController::move_arm_step_vel(
   double kp_rot, 
   double joint_centering_rate, 
   double sol_tol_pos, 
-  double sol_tol_angle)
+  double sol_tol_angle,
+  double max_velocity
+  )
 {
   // its the first time set dt to 0 to avoid huge steps
   if (last_time_ == 0)
     last_time_ = this->now().seconds();
 
   // caluate the time step between this step and last
-  double dt = this->now().seconds() - last_time_;
+  // double dt = this->now().seconds() - last_time_;
+  double dt = 0.05;
 
   RCLCPP_INFO(this->get_logger(), "Delta time for this step: %.4f seconds", dt);
 
@@ -114,17 +117,39 @@ bool ArmController::move_arm_step_vel(
   Eigen::Matrix4d T_down = T_target;
   T_down.block<3,3>(0,0) = R_down;
 
+  // clamp min z value
+  float min_z = 0.04;
+  if (T_down(2,3) < min_z) {
+    T_down(2,3) = min_z;
+  }
+
   // IK cache (declared once, reused each loop)
   cache.setConfiguration(current_joint_angles_);
   Vector7d dq_step = inverse_kinematics_velocity(cache, T_down, kp_pos, kp_rot, joint_centering_rate);
 
-  target_joint_angles_ = current_joint_angles_ + dq_step * static_cast<float>(dt);
+  // clamp the max speed
+  Vector7d dq_clamped;
+  // float reduction_factor = 0.02;
+  for (int i = 0; i < 7; ++i) {
+    if (std::abs(dq_step[i]) > max_velocity) {
+      // dq_clamped[i] = dq_clamped[i] * reduction_factor; // slow down gradually
+      dq_clamped[i] = (dq_step[i] > 0 ? 1 : -1) * max_velocity;
+    } else {
+      dq_clamped[i] = dq_step[i]; // * reduction_factor;
+    }
+  }
 
-  RCLCPP_INFO(this->get_logger(), "Step %zu: Current vel: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, Gripper: %.2f, Target Gripper: %.2f]",
+  target_joint_angles_ = current_joint_angles_ + dq_clamped * static_cast<float>(dt);
+
+  RCLCPP_INFO(this->get_logger(), "Step %zu: Current vel: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, Gripper: %.2f, Target Gripper: %.2f]",
               count_,
+              dq_clamped[0], dq_clamped[1], dq_clamped[2],
+              dq_clamped[3], dq_clamped[4], dq_clamped[5],
+              dq_clamped[6], gripper_current_pos_, gripper_target_pos_);
+  RCLCPP_INFO(this->get_logger(), "          unclamped vel: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
               dq_step[0], dq_step[1], dq_step[2],
               dq_step[3], dq_step[4], dq_step[5],
-              dq_step[6], gripper_current_pos_, gripper_target_pos_);
+              dq_step[6]);
 
   RCLCPP_INFO(this->get_logger(), "          Target  Joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
               target_joint_angles_[0], target_joint_angles_[1], target_joint_angles_[2],
@@ -158,6 +183,7 @@ bool ArmController::move_arm_step_vel(
   } 
 
   publish_joint_command_pos(target_joint_angles_, gripper_target_pos_);
+  // publish_joint_command_vel(dq_clamped, gripper_target_pos_); // gripper vel set to 0 for now
   const auto& jointPositions = cache.jointPositions();
   publish_joint_positions(jointPositions);
 
@@ -470,23 +496,24 @@ void ArmController::load_demo_sequence() {
   
   // 3. Wait a bit
   add_command(std::make_unique<WaitCommand>(this, 1.0));
-  
-  // 4. Move to pick position following the cube
-  Eigen::Matrix4d place_pose_1 = Eigen::Matrix4d::Identity();
-  place_pose_1(0, 3) = 0.4;
-  place_pose_1(1, 3) = 0.0;
-  place_pose_1(2, 3) = 0.3;
-  add_command(std::make_unique<MoveToPoseCommand>(this, place_pose_1));
 
-  add_command(std::make_unique<WaitCommand>(this, 2.0)); // wait for cube to settle
 
   add_command(std::make_unique<MoveToPoseCommand>(this, std::ref(T_target_), MoveToPoseCommand::ByReference{}));
   
   // 5. Close gripper
   add_command(std::make_unique<CloseGripperCommand>(this));
+
+  add_command(std::make_unique<WaitCommand>(this, 2.0)); // wait for cube to settle
+  
+  // 4. Move to pick position following the cube. lift it in the air
+  Eigen::Matrix4d place_pose_1 = Eigen::Matrix4d::Identity();
+  place_pose_1(0, 3) = 0.4;
+  place_pose_1(1, 3) = 0.0;
+  place_pose_1(2, 3) = 0.3;
+  add_command(std::make_unique<MoveToPoseCommand>(this, place_pose_1));
   
   // 6. Wait
-  add_command(std::make_unique<WaitCommand>(this, 0.5));
+  add_command(std::make_unique<WaitCommand>(this, 2.0));
   
   // 7. Move to place position
   Eigen::Matrix4d place_pose_2 = Eigen::Matrix4d::Identity();
