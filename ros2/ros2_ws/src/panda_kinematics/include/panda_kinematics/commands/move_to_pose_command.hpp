@@ -30,6 +30,7 @@ public:
     MoveToPoseCommand(
         ArmController* controller,
         const Eigen::Matrix4d& target_pose,
+        int max_iterations = 100,
         double pos_tolerance = 0.05,
         double angle_tolerance = 0.1,
         double timeout = 30.0
@@ -41,6 +42,7 @@ public:
         ArmController* controller,
         const Eigen::Matrix4d& target_pose,
         ByReference,  // Tag to distinguish from copy constructor
+        int max_iterations = 100,
         double pos_tolerance = 0.05,
         double angle_tolerance = 0.1,
         double timeout = 30.0
@@ -56,6 +58,7 @@ private:
     const Eigen::Matrix4d* target_pose_ptr_;  // Pointer for flexibility
     Eigen::Matrix4d target_pose_copy_;         // Copy for static poses
     bool use_reference_;                       // Track which to use
+    int max_iterations_;
     double pos_tolerance_;
     double angle_tolerance_;
     double timeout_;

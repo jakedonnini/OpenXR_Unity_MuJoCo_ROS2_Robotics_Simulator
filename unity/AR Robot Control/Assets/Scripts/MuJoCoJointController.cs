@@ -36,7 +36,9 @@ public class MuJoCoJointController : MonoBehaviour
             {
                 if (jointActuators[i] != null)
                 {
-                    jointActuators[i].Type = MjActuator.ActuatorType.Position;
+                    jointActuators[i].Type = MjActuator.ActuatorType.General;
+                    // jointActuators[i].CustomParams.Kp = 500.0f;
+                    // jointActuators[i].CustomParams.Kv = 20.0f;
                 }
             }
         }

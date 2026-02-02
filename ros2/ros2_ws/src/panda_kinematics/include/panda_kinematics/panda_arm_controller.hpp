@@ -60,13 +60,24 @@ public:
      */
     bool move_arm_step_vel(
         KinematicsCache& cache, 
-        const Eigen::Matrix4d& T_target, 
+        const Eigen::Matrix4d& T_target,
+        Vector7d& final_pos, 
         double kp_pos = 10, // 10
         double kp_rot = 5,  // 5 with pos
         double joint_centering_rate = 0.2, 
         double sol_tol_pos = 0.1, 
+        double sol_tol_angle = 0.1
+    );
+
+    bool move_arm_vel(
+        KinematicsCache& cache, 
+        const Eigen::Matrix4d& T_target, 
+        double kp_pos = 10, 
+        double kp_rot = 5, 
+        double joint_centering_rate = 0.2, 
+        double sol_tol_pos = 0.1, 
         double sol_tol_angle = 0.1,
-        double max_velocity = 2.0
+        int max_iterations = 100
     );
 
     /**

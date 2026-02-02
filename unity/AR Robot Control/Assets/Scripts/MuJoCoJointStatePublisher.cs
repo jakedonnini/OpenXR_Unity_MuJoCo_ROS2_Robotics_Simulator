@@ -9,7 +9,7 @@ public class MuJoCoJointStatePublisher : MonoBehaviour
     [Header("ROS Settings")]
     [SerializeField] private string topicNamePos = "panda_joint_states_pos";
     [SerializeField] private string topicNameVel = "panda_joint_states_vel";
-    [SerializeField] private float publishRate = 100f; // Hz
+    [SerializeField] private float publishRate = 20f; // Hz
     
     [Header("MuJoCo Joints")]
     [SerializeField] private MjHingeJoint[] joints = new MjHingeJoint[7];

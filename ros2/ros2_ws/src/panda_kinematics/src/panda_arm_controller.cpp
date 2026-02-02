@@ -33,7 +33,7 @@ ArmController::ArmController() : Node("arm_controller"), count_(0)
     std::bind(&ArmController::joint_state_callback_vel, this, std::placeholders::_1));
 
   timer_ = this->create_wall_timer(
-    50ms, std::bind(&ArmController::timer_callback, this));
+    100ms, std::bind(&ArmController::timer_callback, this));
   
   // Initialize current joint positions to zero
   current_joint_angles_.setZero();
@@ -76,7 +76,7 @@ size_t ArmController::queue_size() const {
   return command_queue_.size();
 }
 
-bool ArmController::move_arm_step_vel(
+bool ArmController::move_arm_vel(
   KinematicsCache& cache, 
   const Eigen::Matrix4d& T_target, 
   double kp_pos, 
@@ -84,7 +84,65 @@ bool ArmController::move_arm_step_vel(
   double joint_centering_rate, 
   double sol_tol_pos, 
   double sol_tol_angle,
-  double max_velocity
+  int max_iterations
+  )
+{
+  // start from current position and iterate angels until target reached
+  Vector7d q = current_joint_angles_;
+
+  // iterate until max iterations or target reached
+  int i = 0;
+  while (i < max_iterations) {
+    RCLCPP_INFO(this->get_logger(), "Iteration %d/%d", i+1, max_iterations);
+    // take a step
+    bool reached = move_arm_step_vel(
+      cache, 
+      T_target,
+      q,
+      kp_pos,
+      kp_rot,
+      joint_centering_rate,
+      sol_tol_pos,
+      sol_tol_angle
+    );
+
+    RCLCPP_INFO(this->get_logger(), "Q: %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
+                  q[0], q[1], q[2],
+                  q[3], q[4], q[5],
+                  q[6]);
+
+    if (reached) {
+      RCLCPP_INFO(this->get_logger(), "Target pose reached in %d iterations.", i+1);
+      const auto& jointPositions = cache.jointPositions();
+      publish_joint_positions(jointPositions);
+
+      // set the target joint angles to last computed
+      target_joint_angles_ = q;
+
+      RCLCPP_INFO(this->get_logger(), "Q: %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
+                  target_joint_angles_[0], target_joint_angles_[1], target_joint_angles_[2],
+                  target_joint_angles_[3], target_joint_angles_[4], target_joint_angles_[5],
+                  target_joint_angles_[6]);
+
+      publish_joint_command_pos(target_joint_angles_, gripper_target_pos_);
+
+      return true;
+    }
+    i++;
+  }
+
+  return false;
+}
+
+bool ArmController::move_arm_step_vel(
+  KinematicsCache& cache, 
+  const Eigen::Matrix4d& T_target,
+  Vector7d& final_pos, 
+  double kp_pos, 
+  double kp_rot, 
+  double joint_centering_rate, 
+  double sol_tol_pos, 
+  double sol_tol_angle
   )
 {
   // its the first time set dt to 0 to avoid huge steps
@@ -93,9 +151,7 @@ bool ArmController::move_arm_step_vel(
 
   // caluate the time step between this step and last
   // double dt = this->now().seconds() - last_time_;
-  double dt = 0.05;
-
-  RCLCPP_INFO(this->get_logger(), "Delta time for this step: %.4f seconds", dt);
+  double dt = 0.1;
 
   Eigen::Matrix3d R_target = T_target.block<3,3>(0,0);
 
@@ -124,68 +180,17 @@ bool ArmController::move_arm_step_vel(
   }
 
   // IK cache (declared once, reused each loop)
-  cache.setConfiguration(current_joint_angles_);
+  cache.setConfiguration(final_pos);
   Vector7d dq_step = inverse_kinematics_velocity(cache, T_down, kp_pos, kp_rot, joint_centering_rate);
 
-  // clamp the max speed
-  Vector7d dq_clamped;
-  // float reduction_factor = 0.02;
-  for (int i = 0; i < 7; ++i) {
-    if (std::abs(dq_step[i]) > max_velocity) {
-      // dq_clamped[i] = dq_clamped[i] * reduction_factor; // slow down gradually
-      dq_clamped[i] = (dq_step[i] > 0 ? 1 : -1) * max_velocity;
-    } else {
-      dq_clamped[i] = dq_step[i]; // * reduction_factor;
-    }
-  }
-
-  target_joint_angles_ = current_joint_angles_ + dq_clamped * static_cast<float>(dt);
-
-  RCLCPP_INFO(this->get_logger(), "Step %zu: Current vel: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, Gripper: %.2f, Target Gripper: %.2f]",
-              count_,
-              dq_clamped[0], dq_clamped[1], dq_clamped[2],
-              dq_clamped[3], dq_clamped[4], dq_clamped[5],
-              dq_clamped[6], gripper_current_pos_, gripper_target_pos_);
-  RCLCPP_INFO(this->get_logger(), "          unclamped vel: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
-              dq_step[0], dq_step[1], dq_step[2],
-              dq_step[3], dq_step[4], dq_step[5],
-              dq_step[6]);
-
-  RCLCPP_INFO(this->get_logger(), "          Target  Joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
-              target_joint_angles_[0], target_joint_angles_[1], target_joint_angles_[2],
-              target_joint_angles_[3], target_joint_angles_[4], target_joint_angles_[5],
-              target_joint_angles_[6]);
-
-  RCLCPP_INFO(this->get_logger(), "          current joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
-              current_joint_angles_[0], current_joint_angles_[1], current_joint_angles_[2],
-              current_joint_angles_[3], current_joint_angles_[4], current_joint_angles_[5],
-              current_joint_angles_[6]);
-
-  RCLCPP_INFO(this->get_logger(), "          Target Pose: Pos(%.2f, %.2f, %.2f) Rot:\n[%.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f]",
-              T_down(0, 3), T_down(1, 3), T_down(2, 3),
-              T_down(0, 0), T_down(0, 1), T_down(0, 2),
-              T_down(1, 0), T_down(1, 1), T_down(1, 2),
-              T_down(2, 0), T_down(2, 1), T_down(2, 2));
-
-  RCLCPP_INFO(this->get_logger(), "          Current Pose: Pos(%.2f, %.2f, %.2f) Rot:\n[%.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f;\n %.2f, %.2f, %.2f]",
-              cache.T0e()(0, 3),
-              cache.T0e()(1, 3),
-              cache.T0e()(2, 3),
-              cache.T0e()(0, 0), cache.T0e()(0, 1), cache.T0e()(0, 2),
-              cache.T0e()(1, 0), cache.T0e()(1, 1), cache.T0e()(1, 2),
-              cache.T0e()(2, 0), cache.T0e()(2, 1), cache.T0e()(2, 2));
+  final_pos = final_pos + dq_step * static_cast<float>(dt);
 
   // if soultion is vaild, closing gripper happens outsdie this function
-  if (is_valid_solution(current_joint_angles_, T_down, sol_tol_pos, sol_tol_angle)) {
+  if (is_valid_solution(final_pos, T_down, sol_tol_pos, sol_tol_angle)) {
     RCLCPP_INFO(this->get_logger(), "Valid solution reached, closing gripper.");
     last_time_ = 0.0;
     return true; // switch to a state matchine in real application
   } 
-
-  publish_joint_command_pos(target_joint_angles_, gripper_target_pos_);
-  // publish_joint_command_vel(dq_clamped, gripper_target_pos_); // gripper vel set to 0 for now
-  const auto& jointPositions = cache.jointPositions();
-  publish_joint_positions(jointPositions);
 
   last_time_ = this->now().seconds();
   return false;
@@ -279,7 +284,7 @@ void ArmController::move_arm_home_pos()
 bool ArmController::reached_arm_home_position()
 {
   target_joint_angles_ << 0.0, 0.0, 0.0, -M_PI/2, 0.0, M_PI/2, M_PI/4;
-  double tol = 0.05; // radians
+  double tol = 0.1; // radians
   for (int i = 0; i < 7; i++) {
     if (std::abs(current_joint_angles_[i] - target_joint_angles_[i]) > tol) {
       return false;
@@ -497,20 +502,21 @@ void ArmController::load_demo_sequence() {
   // 3. Wait a bit
   add_command(std::make_unique<WaitCommand>(this, 1.0));
 
-
   add_command(std::make_unique<MoveToPoseCommand>(this, std::ref(T_target_), MoveToPoseCommand::ByReference{}));
   
+  add_command(std::make_unique<WaitCommand>(this, 2.0));
+
   // 5. Close gripper
   add_command(std::make_unique<CloseGripperCommand>(this));
 
   add_command(std::make_unique<WaitCommand>(this, 2.0)); // wait for cube to settle
   
   // 4. Move to pick position following the cube. lift it in the air
-  Eigen::Matrix4d place_pose_1 = Eigen::Matrix4d::Identity();
-  place_pose_1(0, 3) = 0.4;
-  place_pose_1(1, 3) = 0.0;
-  place_pose_1(2, 3) = 0.3;
-  add_command(std::make_unique<MoveToPoseCommand>(this, place_pose_1));
+  Eigen::Matrix4d above_target = Eigen::Matrix4d::Identity();
+  above_target(0,3) = 0.48;
+  above_target(1,3) = 0.0;
+  above_target(2,3) = 0.5;
+  add_command(std::make_unique<MoveToPoseCommand>(this, above_target));
   
   // 6. Wait
   add_command(std::make_unique<WaitCommand>(this, 2.0));
@@ -521,6 +527,9 @@ void ArmController::load_demo_sequence() {
   place_pose_2(1, 3) = -0.2;
   place_pose_2(2, 3) = 0.3;
   add_command(std::make_unique<MoveToPoseCommand>(this, place_pose_2));
+
+  // 6. Wait
+  add_command(std::make_unique<WaitCommand>(this, 2.0));
   
   // 8. Open gripper
   add_command(std::make_unique<OpenGripperCommand>(this));
