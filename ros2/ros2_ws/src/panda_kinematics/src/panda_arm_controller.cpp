@@ -102,14 +102,18 @@ bool ArmController::move_arm_vel(
       kp_pos,
       kp_rot,
       joint_centering_rate,
-      sol_tol_pos,
-      sol_tol_angle
+      0.01, // sol_tol_pos
+      0.05  // sol_tol_angle
     );
 
     RCLCPP_INFO(this->get_logger(), "Q: %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
                   q[0], q[1], q[2],
                   q[3], q[4], q[5],
                   q[6]);
+
+    Eigen::Matrix4d T_end_effector = cache.T0e();
+    RCLCPP_INFO(this->get_logger(), "Pos: (%.3f, %.3f, %.3f)", 
+                T_end_effector(0,3), T_end_effector(1,3), T_end_effector(2,3));
 
     if (reached) {
       RCLCPP_INFO(this->get_logger(), "Target pose reached in %d iterations.", i+1);
@@ -118,11 +122,6 @@ bool ArmController::move_arm_vel(
 
       // set the target joint angles to last computed
       target_joint_angles_ = q;
-
-      RCLCPP_INFO(this->get_logger(), "Q: %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
-                  target_joint_angles_[0], target_joint_angles_[1], target_joint_angles_[2],
-                  target_joint_angles_[3], target_joint_angles_[4], target_joint_angles_[5],
-                  target_joint_angles_[6]);
 
       publish_joint_command_pos(target_joint_angles_, gripper_target_pos_);
 
@@ -145,13 +144,10 @@ bool ArmController::move_arm_step_vel(
   double sol_tol_angle
   )
 {
-  // its the first time set dt to 0 to avoid huge steps
-  if (last_time_ == 0)
-    last_time_ = this->now().seconds();
 
   // caluate the time step between this step and last
   // double dt = this->now().seconds() - last_time_;
-  double dt = 0.1;
+  double dt = 0.01;
 
   Eigen::Matrix3d R_target = T_target.block<3,3>(0,0);
 
@@ -187,12 +183,14 @@ bool ArmController::move_arm_step_vel(
 
   // if soultion is vaild, closing gripper happens outsdie this function
   if (is_valid_solution(final_pos, T_down, sol_tol_pos, sol_tol_angle)) {
-    RCLCPP_INFO(this->get_logger(), "Valid solution reached, closing gripper.");
-    last_time_ = 0.0;
+    RCLCPP_INFO(this->get_logger(), "Valid solution reached");
+    RCLCPP_WARN(this->get_logger(), "Final Joints: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
+                final_pos[0], final_pos[1], final_pos[2],
+                final_pos[3], final_pos[4], final_pos[5],
+                final_pos[6]);
     return true; // switch to a state matchine in real application
   } 
 
-  last_time_ = this->now().seconds();
   return false;
 }
 

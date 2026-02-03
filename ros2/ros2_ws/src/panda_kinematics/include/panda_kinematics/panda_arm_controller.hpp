@@ -75,8 +75,8 @@ public:
         double kp_pos = 10, 
         double kp_rot = 5, 
         double joint_centering_rate = 0.2, 
-        double sol_tol_pos = 0.1, 
-        double sol_tol_angle = 0.1,
+        double sol_tol_pos = 0.01, 
+        double sol_tol_angle = 0.05,
         int max_iterations = 100
     );
 

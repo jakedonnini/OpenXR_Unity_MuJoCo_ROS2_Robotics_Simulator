@@ -32,7 +32,7 @@ public class RosPublishPosition : MonoBehaviour
         {
             timeElapsed = 0;
 
-            // Debug.Log($"Publishing position  {trackedObject.transform.position.x}, {trackedObject.transform.position.y}, {trackedObject.transform.position.z}");
+            Debug.Log($"Publishing position  {trackedObject.transform.position.x - armOffset.position.x}, {trackedObject.transform.position.z - armOffset.position.z}, {trackedObject.transform.position.y - armOffset.position.y}");
 
             // convert from unity(RUF) to ROS(FLU)
             // Create a new message
