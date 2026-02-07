@@ -117,6 +117,7 @@ bool ArmController::move_arm_vel(
 
     if (reached) {
       RCLCPP_INFO(this->get_logger(), "Target pose reached in %d iterations.", i+1);
+      cache.setConfiguration(q);
       const auto& jointPositions = cache.jointPositions();
       publish_joint_positions(jointPositions);
 

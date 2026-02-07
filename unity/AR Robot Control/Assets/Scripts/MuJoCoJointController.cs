@@ -17,7 +17,8 @@ public class MuJoCoJointController : MonoBehaviour
     [SerializeField] private MjActuator[] jointActuators = new MjActuator[8]; // 8th is gripper
     
     // Alternative: if using MjHingeJoint directly
-    // [SerializeField] private MjHingeJoint[] joints = new MjHingeJoint[7];
+    [SerializeField] private MjHingeJoint[] joints = new MjHingeJoint[7];
+    [SerializeField] public float Kp = 1.0f;
     
     private ROSConnection ros;
     
@@ -36,7 +37,7 @@ public class MuJoCoJointController : MonoBehaviour
             {
                 if (jointActuators[i] != null)
                 {
-                    jointActuators[i].Type = MjActuator.ActuatorType.General;
+                    // jointActuators[i].Type = MjActuator.ActuatorType.Position;
                     // jointActuators[i].CustomParams.Kp = 500.0f;
                     // jointActuators[i].CustomParams.Kv = 20.0f;
                 }
@@ -90,6 +91,36 @@ public class MuJoCoJointController : MonoBehaviour
         jointActuators[7].Control = (float)msg.gripper_pos; // Gripper control
         
         // Debug.Log($"Applied joint angles: [{string.Join(", ", msg.joint_angles)}]");
+    }
+
+    bool jogVelocity(JointCommandMsg msg)
+    {
+        // return true when it has reached the goal
+        if (msg.joint_angles.Length != 7)
+        {
+            Debug.LogWarning($"Expected 7 joint angles, got {msg.joint_angles.Length}");
+            return true;
+        }
+
+        bool reached_goal = false;
+
+        // iterate velocities until reaches goal
+        while(!reached_goal)
+        {
+            
+            for (int i = 0; i < 7 && i < jointActuators.Length; i++)
+            {
+                if (jointActuators[i] != null)
+                {
+                    float diff = joints[i].Position - (float)msg.joint_angles[i];
+
+                    
+
+                    // Set the control signal for position actuators (radians) and convert to degrees if necessary
+                    jointActuators[i].Control = (float)msg.joint_angles[i];
+                }
+            }
+        }
     }
     
     // Alternative method if using velocity control
