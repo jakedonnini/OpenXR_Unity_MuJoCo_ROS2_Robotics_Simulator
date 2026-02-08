@@ -2,12 +2,13 @@ using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.PandaKinematics; // Your custom message namespace
 using Mujoco;
+using System.Linq;
 
 public class MuJoCoJointController : MonoBehaviour
 {
     [Header("ROS Settings")]
     [SerializeField] private string topicName = "arm_joint_commands";
-    [SerializeField] public enum ControlMode { Position, Velocity }
+    [SerializeField] public enum ControlMode { Position, Velocity, Jog_Velocity }
 
     [Header("MuJoCo Joints")]
     [SerializeField] public ControlMode controlMode = ControlMode.Velocity;
@@ -19,6 +20,7 @@ public class MuJoCoJointController : MonoBehaviour
     // Alternative: if using MjHingeJoint directly
     [SerializeField] private MjHingeJoint[] joints = new MjHingeJoint[7];
     [SerializeField] public float Kp = 1.0f;
+    [SerializeField] public float tolerance = 0.1f;
     
     private ROSConnection ros;
     
@@ -62,6 +64,12 @@ public class MuJoCoJointController : MonoBehaviour
             // gripper is awlays in general mode
             jointActuators[7].Type = MjActuator.ActuatorType.Position; // assuming 8th actuator is gripper
         }
+        else if (controlMode == ControlMode.Jog_Velocity)
+        {
+            ros.RegisterPublisher<JointCommandMsg>(topicName);
+            ros.Subscribe<JointCommandMsg>(topicName, jogVelocity);
+            Debug.Log($"Subscribed to {topicName}");
+        }
     }
     
     void OnJointCommandReceived(JointCommandMsg msg)
@@ -93,16 +101,17 @@ public class MuJoCoJointController : MonoBehaviour
         // Debug.Log($"Applied joint angles: [{string.Join(", ", msg.joint_angles)}]");
     }
 
-    bool jogVelocity(JointCommandMsg msg)
+    void jogVelocity(JointCommandMsg msg)
     {
         // return true when it has reached the goal
         if (msg.joint_angles.Length != 7)
         {
             Debug.LogWarning($"Expected 7 joint angles, got {msg.joint_angles.Length}");
-            return true;
+            return;
         }
 
         bool reached_goal = false;
+        bool[] joint_reached_goal = new bool[7];
 
         // iterate velocities until reaches goal
         while(!reached_goal)
@@ -112,15 +121,25 @@ public class MuJoCoJointController : MonoBehaviour
             {
                 if (jointActuators[i] != null)
                 {
-                    float diff = joints[i].Position - (float)msg.joint_angles[i];
+                    float diff = joints[i].Configuration - (float)msg.joint_angles[i];
 
-                    
-
-                    // Set the control signal for position actuators (radians) and convert to degrees if necessary
-                    jointActuators[i].Control = (float)msg.joint_angles[i];
+                    if (Mathf.Abs(diff) > tolerance)
+                    {
+                        jointActuators[i].Control = -Kp * diff; // simple P controller
+                        joint_reached_goal[i] = false;
+                    } else {
+                        jointActuators[i].Control = 0;
+                        joint_reached_goal[i] = true;
+                    }
                 }
             }
+
+            Debug.Log($"velocities: [{string.Join(", ", jointActuators.Take(7).Select(a => a.Control))}]");
+
+            // check if all joints have reached the goal
+            reached_goal = joint_reached_goal.Contains(false) == false;
         }
+        // Needs way to stop move until this completes, maybe a feedback topic or service to report status back to ROS
     }
     
     // Alternative method if using velocity control
