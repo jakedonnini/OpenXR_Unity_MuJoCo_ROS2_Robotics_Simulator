@@ -147,8 +147,8 @@ public class MuJoCoJointController : MonoBehaviour
         {
             if (jointActuators[i] != null)
             {
-                float diff = joints[i].Configuration - (float)msg.joint_angles[i];
-                Debug.Log($"diff for joint {i}: {diff} (current: {joints[i].Configuration}, target: {(float)msg.joint_angles[i]})");
+                float diff = joints[i].Configuration * Mathf.Deg2Rad - (float)msg.joint_angles[i];
+                Debug.Log($"diff for joint {i}: {diff} (current: {joints[i].Configuration * Mathf.Deg2Rad}, target: {(float)msg.joint_angles[i]})");
 
                 if (Mathf.Abs(diff) > tolerance)
                 {
