@@ -23,6 +23,8 @@ public class MuJoCoJointController : MonoBehaviour
     [SerializeField] public float tolerance = 0.1f;
     
     private ROSConnection ros;
+    private bool message_rec = false;
+    private JointCommandMsg current_msg;
     
     void Start()
     {
@@ -67,9 +69,20 @@ public class MuJoCoJointController : MonoBehaviour
         else if (controlMode == ControlMode.Jog_Velocity)
         {
             ros.RegisterPublisher<JointCommandMsg>(topicName);
-            ros.Subscribe<JointCommandMsg>(topicName, jogVelocity);
+            ros.Subscribe<JointCommandMsg>(topicName, jogMessageReceived);
             Debug.Log($"Subscribed to {topicName}");
         }
+    }
+
+    void jogMessageReceived(JointCommandMsg msg)
+    {
+        if (message_rec)
+        {
+            Debug.LogWarning("Already processing a jog command. Ignoring new command until current one is completed.");
+            return;
+        }
+        message_rec = true;
+        current_msg = msg;
     }
     
     void OnJointCommandReceived(JointCommandMsg msg)
@@ -101,45 +114,63 @@ public class MuJoCoJointController : MonoBehaviour
         // Debug.Log($"Applied joint angles: [{string.Join(", ", msg.joint_angles)}]");
     }
 
-    void jogVelocity(JointCommandMsg msg)
+    void Update()
+    {
+        // if the mesage is received, keep applying the velocity command until it reaches the goal
+        if (message_rec)
+        {
+            bool reached_goal = jogVelocity(current_msg);
+            if (reached_goal)
+            {
+                message_rec = false; // stop applying velocity command
+                Debug.Log("Reached goal position.");
+            }
+        }
+    }
+
+    bool jogVelocity(JointCommandMsg msg)
     {
         // return true when it has reached the goal
         if (msg.joint_angles.Length != 7)
         {
             Debug.LogWarning($"Expected 7 joint angles, got {msg.joint_angles.Length}");
-            return;
+            return true;
         }
+
+        Debug.Log($"Received jog velocity command message. [{string.Join(", ", msg.joint_angles)}]");
 
         bool reached_goal = false;
         bool[] joint_reached_goal = new bool[7];
 
-        // iterate velocities until reaches goal
-        while(!reached_goal)
+        // iterate velocities until reaches goal    
+        for (int i = 0; i < 7 && i < jointActuators.Length; i++)
         {
-            
-            for (int i = 0; i < 7 && i < jointActuators.Length; i++)
+            if (jointActuators[i] != null)
             {
-                if (jointActuators[i] != null)
-                {
-                    float diff = joints[i].Configuration - (float)msg.joint_angles[i];
+                float diff = joints[i].Configuration - (float)msg.joint_angles[i];
+                Debug.Log($"diff for joint {i}: {diff} (current: {joints[i].Configuration}, target: {(float)msg.joint_angles[i]})");
 
-                    if (Mathf.Abs(diff) > tolerance)
-                    {
-                        jointActuators[i].Control = -Kp * diff; // simple P controller
-                        joint_reached_goal[i] = false;
-                    } else {
-                        jointActuators[i].Control = 0;
-                        joint_reached_goal[i] = true;
-                    }
+                if (Mathf.Abs(diff) > tolerance)
+                {
+                    // if (i == 3)
+                    //     continue;
+                    //     diff *= -1; // invert direction for joint 4 if needed
+                    jointActuators[i].Control = -Kp * diff; // simple P controller
+                    joint_reached_goal[i] = false;
+                } else {
+                    jointActuators[i].Control = 0;
+                    joint_reached_goal[i] = true;
                 }
             }
-
-            Debug.Log($"velocities: [{string.Join(", ", jointActuators.Take(7).Select(a => a.Control))}]");
-
-            // check if all joints have reached the goal
-            reached_goal = joint_reached_goal.Contains(false) == false;
         }
-        // Needs way to stop move until this completes, maybe a feedback topic or service to report status back to ROS
+
+        Debug.Log($"velocities: [{string.Join(", ", jointActuators.Take(7).Select(a => a.Control))}]");
+
+        // check if all joints have reached the goal
+        reached_goal = joint_reached_goal.Contains(false) == false;
+        return reached_goal;
+
+        // TODO: Needs way to stop move until this completes, maybe a feedback topic or service to report status back to ROS
     }
     
     // Alternative method if using velocity control
